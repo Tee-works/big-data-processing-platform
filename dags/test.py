@@ -26,7 +26,7 @@ dag = DAG(
 
 def perform_addition(a, b, **kwargs):
     result = a + b
-    print(f"The result of {a} + {b} = {result}")
+    print(f"The result of the calculation {a} + {b} = {result}")
     return result
 
 
