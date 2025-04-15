@@ -1,0 +1,120 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Sid": "CloudWatchLogsReadAccess",
+        "Effect": "Allow",
+        "Action": [
+          "logs:Describe*",
+          "logs:Get*",
+          "logs:List*",
+          "logs:StartQuery",
+          "logs:StopQuery",
+          "logs:TestMetricFilter",
+          "logs:FilterLogEvents",
+          "logs:GetLogEvents",
+          "logs:GetQueryResults"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "CloudWatchLogsDenyDestructiveActions",
+        "Effect": "Deny",
+        "Action": [
+          "logs:DeleteLogGroup",
+          "logs:DeleteLogStream",
+          "logs:DeleteMetricFilter",
+          "logs:DeleteRetentionPolicy",
+          "logs:DeleteSubscriptionFilter"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "EMRReadAccess",
+        "Effect": "Allow",
+        "Action": [
+          "elasticmapreduce:Describe*",
+          "elasticmapreduce:List*",
+          "elasticmapreduce:View*",
+          "elasticmapreduce:GetBlockPublicAccessConfiguration"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "EMRDenyDestructiveActions",
+        "Effect": "Deny",
+        "Action": [
+          "elasticmapreduce:TerminateJobFlows",
+          "elasticmapreduce:RemoveAutoScalingPolicy",
+          "elasticmapreduce:RemoveTags",
+          "elasticmapreduce:DeleteSecurityConfiguration",
+          "elasticmapreduce:DeleteStudio",
+          "elasticmapreduce:DeleteEditor"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "MWAAReadAccess",
+        "Effect": "Allow",
+        "Action": [
+          "airflow:ListEnvironments",
+          "airflow:GetEnvironment",
+          "airflow:ListTagsForResource",
+          "airflow:CreateCliToken",
+          "airflow:GetWebLoginToken",
+          "airflow:CreateWebLoginToken"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "MWAADenyDestructiveActions",
+        "Effect": "Deny",
+        "Action": [
+          "airflow:DeleteEnvironment",
+          "airflow:UpdateEnvironment",
+          "airflow:CreateEnvironment"
+        ],
+        "Resource": "*"
+      },
+      {
+        "Sid": "S3BucketsListAccess",
+        "Effect": "Allow",
+        "Action": [
+          "s3:ListBucket",
+          "s3:GetBucketLocation",
+          "s3:ListBucketMultipartUploads"
+        ],
+        "Resource": ["${s3_bucket_arn}"]
+      },
+      {
+        "Sid": "S3ObjectsReadAccess",
+        "Effect": "Allow",
+        "Action": [
+          "s3:GetObject",
+          "s3:PutObject",
+          "s3:GetObjectAcl",
+          "s3:GetObjectVersion",
+          "s3:GetObjectVersionAcl",
+          "s3:GetObjectTagging",
+          "s3:ListMultipartUploadParts"
+        ],
+        "Resource": ["${s3_bucket_arn}/*"]
+      },
+      {
+        "Sid": "S3DenyDestructiveActions",
+        "Effect": "Deny",
+        "Action": [
+          "s3:DeleteObject",
+          "s3:DeleteObjectVersion",
+          "s3:DeleteBucket",
+          "s3:PutObjectAcl",
+          "s3:PutObjectVersionAcl",
+          "s3:RestoreObject"
+        ],
+        "Resource": [
+          "${s3_bucket_arn}",
+          "${s3_bucket_arn}/*"
+        ]
+      }
+    ]
+  }
