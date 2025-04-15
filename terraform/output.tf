@@ -26,6 +26,7 @@ output "user_credentials" {
       access_key_id     = aws_iam_access_key.users[user].id
       secret_access_key = aws_iam_access_key.users[user].secret
       username          = aws_iam_user.users[user].name
+      password          = aws_iam_user_login_profile.users[user].password
     }
   }
   sensitive   = true

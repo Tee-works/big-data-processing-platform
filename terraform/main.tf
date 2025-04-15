@@ -284,7 +284,7 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager2"
+  name = "${var.project_name}-security-manager3"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
@@ -513,9 +513,9 @@ resource "aws_iam_policy" "mwaa_policy" {
   description = "Permissions for MWAA to access S3, CloudWatch, EMR, and Secrets Manager"
 
   policy = templatefile("./policies/mwaa-policy.json", {
-    s3_arn          = module.s3_bucket.bucket_arn
-    secret_arn      = aws_secretsmanager_secret.security_manager.arn
-    environment_arn = aws_mwaa_environment.big_data.arn
+    s3_arn     = module.s3_bucket.bucket_arn
+    secret_arn = aws_secretsmanager_secret.security_manager.arn
+
   })
 }
 
@@ -575,7 +575,7 @@ resource "aws_mwaa_environment" "big_data" {
   }
 
 
-  depends_on = [aws_iam_role.mwaa_execution_role]
+  depends_on = [aws_iam_role.mwaa_execution_role, aws_iam_policy.mwaa_policy, aws_iam_role_policy_attachment.mwaa_policy_attachment]
 
   tags = local.tags
 }

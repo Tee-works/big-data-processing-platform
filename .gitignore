@@ -5,3 +5,5 @@ terraform/terraform.tfstate
 terraform/terraform.tfstate.backup
 **/.DS_Store
 architecture.dio
+terraform/user_credentials.json
+terraform/errored.tfstate

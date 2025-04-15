@@ -68,27 +68,27 @@ variable "password_reset_required" {
 }
 
 variable "mail_server" {
-  type = string
+  type        = string
   description = "value of the mail server"
-  default = ""
+  default     = ""
 }
 variable "mail_port" {
-  type = number
+  type        = number
   description = "value of the mail server port"
-  default = 587
+  default     = 587
 }
 variable "mail_username" {
-  type = string
+  type        = string
   description = "value of the mail server username"
-  default = ""
+  default     = ""
 }
 variable "mail_password" {
-  type = string
+  type        = string
   description = "value of the mail server password"
-  default = ""
+  default     = ""
 }
 variable "mail_use_tls" {
-  type    = bool
+  type        = bool
   description = "value of the mail server use tls"
-  default = true
+  default     = true
 }
