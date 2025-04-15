@@ -195,9 +195,6 @@ resource "aws_vpc_endpoint" "emr" {
 resource "aws_iam_group" "group" {
   name = var.group_name
 
-  lifecycle {
-    prevent_destroy = true
-  }
 
 }
 
@@ -205,10 +202,6 @@ resource "aws_iam_user" "users" {
   for_each = toset(var.users)
 
   name = each.value
-
-  lifecycle {
-    prevent_destroy = true
-  }
 
 
   tags = merge(local.tags, {
@@ -224,9 +217,6 @@ resource "aws_iam_user_group_membership" "users_to_group" {
   user   = aws_iam_user.users[each.value].name
   groups = [aws_iam_group.group.name]
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 
@@ -237,11 +227,6 @@ resource "aws_iam_user_login_profile" "users" {
   password_length         = var.password_length
   password_reset_required = var.password_reset_required
 
-  lifecycle {
-    ignore_changes  = [password_reset_required]
-    prevent_destroy = true
-
-  }
 }
 
 
@@ -249,10 +234,6 @@ resource "aws_iam_access_key" "users" {
   for_each = var.create_access_keys ? toset(var.users) : []
 
   user = aws_iam_user.users[each.value].name
-
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 
@@ -267,9 +248,6 @@ resource "aws_iam_policy" "combined_policy" {
 
 
   })
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
 
@@ -277,22 +255,16 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
   group      = aws_iam_group.group.name
   policy_arn = aws_iam_policy.combined_policy.arn
 
-  lifecycle {
-    prevent_destroy = true
-  }
 }
 
-# Secret Managers
+# # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager3"
+  name = "${var.project_name}-security-manager4"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
   force_overwrite_replica_secret = true
 
-  lifecycle {
-    prevent_destroy = true
-  }
 
 }
 
@@ -324,9 +296,9 @@ resource "aws_cloudwatch_log_group" "logs" {
 #   domain_name       = "decjobboard.online"
 #   validation_method = "DNS"
 
-#   # lifecycle {
-#   #   prevent_destroy = true
-#   # }
+#   lifecycle {
+#     prevent_destroy = true
+#   }
 
 #   tags = merge(local.tags, {
 #     Name = "${var.project_name}-cert"
