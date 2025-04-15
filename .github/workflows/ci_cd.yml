@@ -7,12 +7,12 @@ on:
     paths:
       - 'dags/**'
       - 'terraform/**'
-      - '.github/workflows/**'
 
 jobs:
   lint-pyspark:
     name: Lint PySpark
     runs-on: ubuntu-latest
+    if: contains(github.event.push.paths, 'dags/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

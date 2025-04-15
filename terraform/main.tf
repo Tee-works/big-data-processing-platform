@@ -10,7 +10,7 @@ data "aws_caller_identity" "current" {}
 
 # VPC
 module "vpc" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/vpc?ref=v1.0.1"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/vpc?ref=v1.0.1"
 
   cidr_block           = var.cidr_block
   vpc_name             = var.vpc_name
@@ -22,7 +22,7 @@ module "vpc" {
 
 # Subnets 
 module "vpc_public_a_subnet" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/subnets?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.0.0/24"
@@ -35,7 +35,7 @@ module "vpc_public_a_subnet" {
 
 
 module "vpc_public_b_subnet" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/subnets?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.1.0/24"
@@ -47,7 +47,7 @@ module "vpc_public_b_subnet" {
 }
 
 module "vpc_private_a_subnet" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/subnets?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.2.0/24"
@@ -60,7 +60,7 @@ module "vpc_private_a_subnet" {
 
 
 module "vpc_private_b_subnet" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/subnets?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.3.0/24"
@@ -73,7 +73,7 @@ module "vpc_private_b_subnet" {
 
 # Security Groups
 module "vpc_public_sg" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/security?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/security?ref=v1.0.0"
 
   vpc_id              = module.vpc.vpc_id
   security_group_name = "${module.vpc.vpc_name}-public-sg"
@@ -108,7 +108,7 @@ module "vpc_public_sg" {
 }
 
 module "vpc_private_sg" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/security?ref=v1.0.0"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/security?ref=v1.0.0"
 
   vpc_id              = module.vpc.vpc_id
   security_group_name = "${module.vpc.vpc_name}-private-sg"
