@@ -140,7 +140,7 @@ resource "aws_vpc_endpoint" "s3" {
   ]
   tags = merge(local.tags, {
     Name = "${var.project_name}-s3-gateway-endpoint"
-  }
+    }
   )
 }
 
@@ -154,7 +154,7 @@ resource "aws_vpc_endpoint" "logs" {
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-logs-interface-endpoint"
-  }
+    }
   )
 }
 
@@ -168,7 +168,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-sm-interface-endpoint"
-  }
+    }
   )
 }
 
@@ -183,7 +183,7 @@ resource "aws_vpc_endpoint" "emr" {
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-emr-interface-endpoint"
-  }
+    }
   )
 
 }
@@ -191,18 +191,18 @@ resource "aws_vpc_endpoint" "emr" {
 # IAM 
 resource "aws_iam_group" "group" {
   name = var.group_name
-  
+
 }
 
 resource "aws_iam_user" "users" {
   for_each = toset(var.users)
 
   name = each.value
- 
+
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-iam-users"
-  }
+    }
   )
 }
 
@@ -254,14 +254,14 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager1"
+  name = "${var.project_name}-security-manager2"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
   force_overwrite_replica_secret = true
 
   lifecycle {
-    ignore_changes = [ 
+    ignore_changes = [
       tags,
       description
     ]
@@ -287,7 +287,7 @@ resource "aws_cloudwatch_log_group" "logs" {
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-cloudwatch-logs"
-  }
+    }
   )
 }
 
@@ -450,9 +450,33 @@ module "s3_bucket" {
 
   enable_versioning = true
 
+  # # Add bucket policy to allow MWAA access
+  # bucket_policy = jsonencode({
+  #   Version = "2012-10-17",
+  #   Statement = [
+  #     {
+  #       Effect = "Allow",
+  #       Principal = {
+  #         Service = "airflow.amazonaws.com"
+  #       },
+  #       Action = [
+  #         "s3:GetObject*",
+  #         "s3:GetBucket*",
+  #         "s3:PutObject*",
+  #         "s3:ListBucket*",
+  #         "s3:DeleteObject*"
+  #       ],
+  #       Resource = [
+  #         "arn:aws:s3:::${var.aws_bucket_name}",
+  #         "arn:aws:s3:::${var.aws_bucket_name}/*"
+  #       ]
+  #     }
+  #   ]
+  # })
+
   tags = merge(local.tags, {
     Name = "${var.project_name}-s3"
-  }
+    }
   )
 }
 
@@ -477,7 +501,7 @@ resource "aws_iam_role" "mwaa_execution_role" {
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-mwaa-role"
-  }
+    }
   )
 }
 
@@ -486,8 +510,8 @@ resource "aws_iam_policy" "mwaa_policy" {
   description = "Permissions for MWAA to access S3, CloudWatch, EMR, and Secrets Manager"
 
   policy = templatefile("./policies/mwaa-policy.json", {
-    s3_arn     = module.s3_bucket.bucket_arn
-    secret_arn = aws_secretsmanager_secret.security_manager.arn
+    s3_arn          = module.s3_bucket.bucket_arn
+    secret_arn      = aws_secretsmanager_secret.security_manager.arn
     environment_arn = aws_mwaa_environment.big_data.arn
   })
 }
@@ -507,6 +531,7 @@ resource "aws_mwaa_environment" "big_data" {
   source_bucket_arn      = module.s3_bucket.bucket_arn
   environment_class      = "mw1.small"
   startup_script_s3_path = "scripts/mwaa_startup.sh"
+  webserver_access_mode  = "PUBLIC_ONLY"
 
 
   airflow_configuration_options = {
@@ -547,14 +572,14 @@ resource "aws_mwaa_environment" "big_data" {
   }
 
 
-
+  depends_on = [aws_iam_role.mwaa_execution_role]
 
   tags = local.tags
 }
 
 resource "aws_s3_object" "mwaa_dags_folder" {
-  bucket = var.aws_bucket_name
-  key    = "dags/"
+  bucket  = var.aws_bucket_name
+  key     = "dags/"
   content = ""
 }
 
@@ -573,12 +598,12 @@ MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
 MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
 MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
 
-airflow connections add 'smtp_default' \\
-  --conn-type 'smtp' \\
-  --conn-host "$MAIL_SERVER" \\
-  --conn-login "$MAIL_USERNAME" \\
-  --conn-password "$MAIL_PASSWORD" \\
-  --conn-port "$MAIL_PORT" \\
+airflow connections add 'smtp_default' \
+  --conn-type 'smtp' \
+  --conn-host "$MAIL_SERVER" \
+  --conn-login "$MAIL_USERNAME" \
+  --conn-password "$MAIL_PASSWORD" \
+  --conn-port "$MAIL_PORT" \
   --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
 EOF
 }

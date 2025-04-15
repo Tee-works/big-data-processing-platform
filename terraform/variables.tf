@@ -45,7 +45,7 @@ variable "group_name" {
 variable "users" {
   description = "List of users to create"
   type        = list(string)
-  default     = []
+  default     = ["Ifeanyi", "Taiwo"]
 }
 
 

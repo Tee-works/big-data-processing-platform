@@ -45,7 +45,8 @@ jobs:
           tflint --version
 
       - name: Run TFLint
-        run: tflint --recursive terraform/
+        working-directory: terraform
+        run: tflint 
 
   sync-dags:
     name: Sync DAGs to S3
