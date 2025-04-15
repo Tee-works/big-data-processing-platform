@@ -471,7 +471,7 @@ resource "aws_cloudwatch_log_group" "logs" {
 # S3
 
 module "s3_bucket" {
-  source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/s3?ref=v1.0.3"
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/s3?ref=v1.0.3"
 
   bucket_name = var.aws_bucket_name
 
