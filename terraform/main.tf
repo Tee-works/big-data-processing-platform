@@ -5,6 +5,9 @@ locals {
   }
 }
 
+# Get current AWS account ID
+data "aws_caller_identity" "current" {}
+
 # VPC
 module "vpc" {
   source = "github.com/Chideraozigbo/My-Terraform-Modules.git/modules/vpc?ref=v1.0.1"
@@ -192,12 +195,20 @@ resource "aws_vpc_endpoint" "emr" {
 resource "aws_iam_group" "group" {
   name = var.group_name
 
+  lifecycle {
+    prevent_destroy = true
+  }
+
 }
 
 resource "aws_iam_user" "users" {
   for_each = toset(var.users)
 
   name = each.value
+
+  lifecycle {
+    prevent_destroy = true
+  }
 
 
   tags = merge(local.tags, {
@@ -212,6 +223,10 @@ resource "aws_iam_user_group_membership" "users_to_group" {
 
   user   = aws_iam_user.users[each.value].name
   groups = [aws_iam_group.group.name]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 
@@ -223,7 +238,9 @@ resource "aws_iam_user_login_profile" "users" {
   password_reset_required = var.password_reset_required
 
   lifecycle {
-    ignore_changes = [password_reset_required]
+    ignore_changes  = [password_reset_required]
+    prevent_destroy = true
+
   }
 }
 
@@ -232,6 +249,10 @@ resource "aws_iam_access_key" "users" {
   for_each = var.create_access_keys ? toset(var.users) : []
 
   user = aws_iam_user.users[each.value].name
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 
@@ -243,13 +264,22 @@ resource "aws_iam_policy" "combined_policy" {
   policy = templatefile("./policies/policy.json", {
     s3_bucket_arn  = module.s3_bucket.bucket_arn
     s3_object_arns = ["${module.s3_bucket.bucket_arn}/*"]
+
+
   })
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 
 resource "aws_iam_group_policy_attachment" "policy_attachment" {
   group      = aws_iam_group.group.name
   policy_arn = aws_iam_policy.combined_policy.arn
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Secret Managers
@@ -261,10 +291,7 @@ resource "aws_secretsmanager_secret" "security_manager" {
   force_overwrite_replica_secret = true
 
   lifecycle {
-    ignore_changes = [
-      tags,
-      description
-    ]
+    prevent_destroy = true
   }
 
 }
@@ -449,30 +476,6 @@ module "s3_bucket" {
   bucket_name = var.aws_bucket_name
 
   enable_versioning = true
-
-  # # Add bucket policy to allow MWAA access
-  # bucket_policy = jsonencode({
-  #   Version = "2012-10-17",
-  #   Statement = [
-  #     {
-  #       Effect = "Allow",
-  #       Principal = {
-  #         Service = "airflow.amazonaws.com"
-  #       },
-  #       Action = [
-  #         "s3:GetObject*",
-  #         "s3:GetBucket*",
-  #         "s3:PutObject*",
-  #         "s3:ListBucket*",
-  #         "s3:DeleteObject*"
-  #       ],
-  #       Resource = [
-  #         "arn:aws:s3:::${var.aws_bucket_name}",
-  #         "arn:aws:s3:::${var.aws_bucket_name}/*"
-  #       ]
-  #     }
-  #   ]
-  # })
 
   tags = merge(local.tags, {
     Name = "${var.project_name}-s3"

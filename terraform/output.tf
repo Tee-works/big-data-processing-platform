@@ -18,20 +18,21 @@ output "user_arns" {
   value       = [for user in aws_iam_user.users : user.arn]
 }
 
-output "access_keys" {
-  description = "Map of user names to access key IDs"
-  value       = var.create_access_keys ? { for user in var.users : user => aws_iam_access_key.users[user].id } : {}
+
+
+output "user_credentials" {
+  value = {
+    for user in var.users : user => {
+      access_key_id     = aws_iam_access_key.users[user].id
+      secret_access_key = aws_iam_access_key.users[user].secret
+      username          = aws_iam_user.users[user].name
+    }
+  }
   sensitive   = true
+  description = "User credentials including access keys and secret keys"
 }
 
-output "secret_keys" {
-  description = "Map of user names to secret access keys"
-  value       = var.create_access_keys ? { for user in var.users : user => aws_iam_access_key.users[user].secret } : {}
-  sensitive   = true
-}
-
-output "passwords" {
-  description = "Map of user names to their initial passwords"
-  value       = { for user in var.users : user => aws_iam_user_login_profile.users[user].password }
-  sensitive   = true
+output "console_login_url" {
+  value       = "https://${data.aws_caller_identity.current.account_id}.signin.aws.amazon.com/console"
+  description = "AWS Console login URL"
 }
