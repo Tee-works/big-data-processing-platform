@@ -1,16 +1,17 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.operators.dummy import DummyOperator
+from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.operators.python import PythonOperator
 
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
-    "email_on_failure": False,
+    "email_on_failure": True,
     "email_on_retry": False,
+    'email': ['chideraozigbo@gmail.com'],
     "retries": 1,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(seconds=3),
 }
 
 

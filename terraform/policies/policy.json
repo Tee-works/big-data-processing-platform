@@ -61,7 +61,6 @@
           "airflow:GetEnvironment",
           "airflow:ListTagsForResource",
           "airflow:CreateCliToken",
-          "airflow:GetWebLoginToken",
           "airflow:CreateWebLoginToken"
         ],
         "Resource": "*"

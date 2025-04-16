@@ -18,7 +18,40 @@ output "user_arns" {
   value       = [for user in aws_iam_user.users : user.arn]
 }
 
+output "vpc_id" {
+  value       = module.vpc.vpc_id
+  description = "The ID of the VPC"
+}
 
+output "public_subnet_a_id" {
+  value       = module.vpc_public_a_subnet.subnet_id
+  description = "Public Subnet A ID"
+}
+
+output "public_subnet_b_id" {
+  value       = module.vpc_public_b_subnet.subnet_id
+  description = "Public Subnet B ID"
+}
+
+output "private_subnet_a_id" {
+  value       = module.vpc_private_a_subnet.subnet_id
+  description = "Private Subnet A ID"
+}
+
+output "private_subnet_b_id" {
+  value       = module.vpc_private_b_subnet.subnet_id
+  description = "Private Subnet B ID"
+}
+
+output "vpc_public_sg_id" {
+  value       = module.vpc_public_sg.security_group_id
+  description = "The ID of the VPC public security group"
+
+}
+output "vpc_private_sg_id" {
+  value       = module.vpc_private_sg.security_group_id
+  description = "The ID of the VPC private security group"
+}
 
 output "user_credentials" {
   value = {

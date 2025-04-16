@@ -259,7 +259,7 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager4"
+  name = "${var.project_name}-security-manager7"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
@@ -480,13 +480,73 @@ resource "aws_iam_role" "mwaa_execution_role" {
   )
 }
 
+# Create EMR Service Role
+resource "aws_iam_role" "emr_service_role" {
+  name = "EMR_DefaultRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "elasticmapreduce.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Attach EMR service managed policy
+resource "aws_iam_role_policy_attachment" "emr_service_role_attachment" {
+  role       = aws_iam_role.emr_service_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2"
+}
+
+# Create EMR Instance Profile Role 
+resource "aws_iam_role" "emr_ec2_role" {
+  name = "EMR_EC2_DefaultRole"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Principal = {
+          Service = "ec2.amazonaws.com"
+        },
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Attach EMR EC2 instance profile managed policy
+resource "aws_iam_role_policy_attachment" "emr_ec2_role_attachment" {
+  role       = aws_iam_role.emr_ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
+}
+
+# Create IAM instance profile for EMR EC2 instances
+resource "aws_iam_instance_profile" "emr_ec2_instance_profile" {
+  name = "EMR_EC2_DefaultRole"
+  role = aws_iam_role.emr_ec2_role.name
+}
+
 resource "aws_iam_policy" "mwaa_policy" {
   name        = "${var.project_name}-mwaa-policy"
   description = "Permissions for MWAA to access S3, CloudWatch, EMR, and Secrets Manager"
 
   policy = templatefile("./policies/mwaa-policy.json", {
-    s3_arn     = module.s3_bucket.bucket_arn
-    secret_arn = aws_secretsmanager_secret.security_manager.arn
+    s3_arn       = module.s3_bucket.bucket_arn
+    secret_arn   = aws_secretsmanager_secret.security_manager.arn
+    emr_role_arn = aws_iam_role.emr_service_role.arn,
+    emr_ec2_arn  = aws_iam_role.emr_ec2_role.arn
 
   })
 }
@@ -499,89 +559,91 @@ resource "aws_iam_role_policy_attachment" "mwaa_policy_attachment" {
 
 
 # MWAA Environment
-resource "aws_mwaa_environment" "big_data" {
-  name                   = "${var.project_name}-mwaa"
-  execution_role_arn     = aws_iam_role.mwaa_execution_role.arn
-  dag_s3_path            = "dags/"
-  source_bucket_arn      = module.s3_bucket.bucket_arn
-  environment_class      = "mw1.small"
-  startup_script_s3_path = "scripts/mwaa_startup.sh"
-  webserver_access_mode  = "PUBLIC_ONLY"
+# resource "aws_mwaa_environment" "big_data" {
+#   name                   = "${var.project_name}-mwaa"
+#   execution_role_arn     = aws_iam_role.mwaa_execution_role.arn
+#   dag_s3_path            = "dags/"
+#   source_bucket_arn      = module.s3_bucket.bucket_arn
+#   environment_class      = "mw1.small"
+#   startup_script_s3_path = "scripts/mwaa_startup.sh"
+#   webserver_access_mode  = "PUBLIC_ONLY"
 
 
-  airflow_configuration_options = {
-    "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
-    "email.default_email_on_retry"   = "True"
-    "email.default_email_on_failure" = "True"
-  }
+#   airflow_configuration_options = {
+#     "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
+#     "email.default_email_on_retry"   = "True"
+#     "email.default_email_on_failure" = "True"
+#   }
 
-  logging_configuration {
-    dag_processing_logs {
-      enabled   = true
-      log_level = "DEBUG"
-    }
-    scheduler_logs {
-      enabled   = true
-      log_level = "INFO"
-    }
-    task_logs {
-      enabled   = true
-      log_level = "INFO"
-    }
-    webserver_logs {
-      enabled   = true
-      log_level = "INFO"
-    }
-    worker_logs {
-      enabled   = true
-      log_level = "INFO"
-    }
-  }
+#   logging_configuration {
+#     dag_processing_logs {
+#       enabled   = true
+#       log_level = "DEBUG"
+#     }
+#     scheduler_logs {
+#       enabled   = true
+#       log_level = "DEBUG"
+#     }
+#     task_logs {
+#       enabled   = true
+#       log_level = "DEBUG"
+#     }
+#     webserver_logs {
+#       enabled   = true
+#       log_level = "DEBUG"
+#     }
+#     worker_logs {
+#       enabled   = true
+#       log_level = "DEBUG"
+#     }
+#   }
 
-  network_configuration {
-    security_group_ids = [module.vpc_private_sg.security_group_id]
-    subnet_ids = [
-      module.vpc_private_a_subnet.subnet_id,
-      module.vpc_private_b_subnet.subnet_id
-    ]
-  }
+#   network_configuration {
+#     security_group_ids = [module.vpc_private_sg.security_group_id]
+#     subnet_ids = [
+#       module.vpc_private_a_subnet.subnet_id,
+#       module.vpc_private_b_subnet.subnet_id
+#     ]
+#   }
 
 
-  depends_on = [aws_iam_role.mwaa_execution_role, aws_iam_policy.mwaa_policy, aws_iam_role_policy_attachment.mwaa_policy_attachment]
+#   depends_on = [aws_iam_role.mwaa_execution_role, aws_iam_policy.mwaa_policy, aws_iam_role_policy_attachment.mwaa_policy_attachment]
 
-  tags = local.tags
-}
+#   tags = local.tags
+# }
 
 resource "aws_s3_object" "mwaa_dags_folder" {
+  for_each = toset(var.s3_objects)
+
   bucket  = var.aws_bucket_name
-  key     = "dags/"
+  key     = each.key
   content = ""
 }
 
-resource "aws_s3_object" "mwaa_startup_script" {
-  bucket = var.aws_bucket_name
-  key    = "scripts/mwaa_startup.sh"
+# resource "aws_s3_object" "mwaa_startup_script" {
+#   bucket = var.aws_bucket_name
+#   key    = "scripts/mwaa_startup.sh"
 
-  content = <<EOF
-#!/bin/bash
+#   content = <<EOF
+# #!/bin/bash
 
-SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
+# SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
 
-MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
-MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
-MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
-MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
-MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
+# MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
+# MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
+# MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
+# MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
+# MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
 
-airflow connections add 'smtp_default' \
-  --conn-type 'smtp' \
-  --conn-host "$MAIL_SERVER" \
-  --conn-login "$MAIL_USERNAME" \
-  --conn-password "$MAIL_PASSWORD" \
-  --conn-port "$MAIL_PORT" \
-  --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
-EOF
-}
+# airflow connections add 'smtp_default' \
+#   --conn-type 'smtp' \
+#   --conn-host "$MAIL_SERVER" \
+#   --conn-login "$MAIL_USERNAME" \
+#   --conn-password "$MAIL_PASSWORD" \
+#   --conn-port "$MAIL_PORT" \
+#   --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
+# EOF
+# }
 
 # resource "null_resource" "update_mwaa_domain" {
 #   depends_on = [aws_mwaa_environment.big_data, aws_lb.airflow_alb, aws_route53_record.alias]

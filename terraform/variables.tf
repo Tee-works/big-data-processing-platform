@@ -92,3 +92,10 @@ variable "mail_use_tls" {
   description = "value of the mail server use tls"
   default     = true
 }
+
+variable "s3_objects" {
+  type        = list(string)
+  description = "List of S3 objects to create"
+  default     = ["etl/", "dags/", "logs/"]
+
+}

@@ -7,6 +7,7 @@ on:
     paths:
       - 'dags/**'
       - 'terraform/**'
+      - 'etl/**'
 
 jobs:
   lint-pyspark:
@@ -26,10 +27,10 @@ jobs:
           pip install flake8 isort
 
       - name: Run flake8
-        run: flake8 dags/
+        run: flake8 dags/ etl/
 
       - name: Run isort
-        run: isort --check-only dags/
+        run: isort --check-only dags/ etl/
 
   terraform-lint:
     name: Lint Terraform
@@ -65,4 +66,7 @@ jobs:
           aws-region: eu-north-1  
 
       - name: Sync DAGs to S3
-        run: aws s3 sync dags/ s3://$BUCKET_NAME/dags/
+        run: |
+          aws s3 sync dags/ s3://$BUCKET_NAME/dags/
+          aws s3 sync etl/ s3://$BUCKET_NAME/etl/
+        
