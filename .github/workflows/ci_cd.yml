@@ -49,7 +49,7 @@ jobs:
         run: tflint 
 
   sync-dags:
-    name: Sync DAGs to S3
+    name: Sync DAGs and spark script to S3
     runs-on: ubuntu-latest
     needs: [lint-pyspark]
     env:
