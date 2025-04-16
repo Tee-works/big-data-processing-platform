@@ -4,7 +4,8 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.providers.amazon.aws.operators.emr import (
     EmrAddStepsOperator, EmrCreateJobFlowOperator, EmrTerminateJobFlowOperator)
-from airflow.providers.amazon.aws.sensors.emr import EmrStepSensor
+from airflow.providers.amazon.aws.sensors.emr import (EmrJobFlowSensor,
+                                                      EmrStepSensor)
 from airflow.utils.trigger_rule import TriggerRule
 
 DEFAULT_ARGS = {
@@ -85,6 +86,17 @@ with DAG(
         emr_conn_id="emr_default",
     )
 
+    check_cluster_ready = EmrJobFlowSensor(
+        task_id="check_cluster_ready",
+        job_flow_id=(
+            "{{ task_instance.xcom_pull(task_ids='create_emr_cluster', "
+            "key='return_value') }}"
+        ),
+        target_states=["WAITING", "RUNNING"],
+        poke_interval=30,
+        timeout=1200,
+    )
+
     add_step = EmrAddStepsOperator(
         task_id="submit_spark_application",
         job_flow_id=(
@@ -105,8 +117,10 @@ with DAG(
         step_id=(
             "{{ task_instance.xcom_pull(task_ids='submit_spark_application', "
             "key='return_value')[0] }}"
-            ),
+        ),
         aws_conn_id="aws_default",
+        poke_interval=30,
+        timeout=3600,
     )
 
     remove_cluster = EmrTerminateJobFlowOperator(
@@ -114,11 +128,19 @@ with DAG(
         job_flow_id=(
             "{{ task_instance.xcom_pull(task_ids='create_emr_cluster',"
             "key='return_value') }}"
-            ),
+        ),
         aws_conn_id="aws_default",
         trigger_rule=TriggerRule.ALL_DONE,
     )
 
     end = DummyOperator(task_id="end_workflow")
 
-    begin >> create_cluster >> add_step >> check_step >> remove_cluster >> end
+    (
+        begin
+        >> create_cluster
+        >> check_cluster_ready
+        >> add_step
+        >> check_step
+        >> remove_cluster
+        >> end
+    )
