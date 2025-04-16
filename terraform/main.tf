@@ -506,6 +506,42 @@ resource "aws_iam_role_policy_attachment" "emr_service_role_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2"
 }
 
+resource "aws_iam_policy" "emr_service_additional_policy" {
+  name        = "EMR_ServiceAdditionalPermissions"
+  description = "Additional permissions for EMR service role to create EC2 resources"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = [
+          "ec2:*",
+        ],
+        Resource = "*"
+      }, 
+      {
+        Effect   = "Allow",
+        Action   = "iam:CreateServiceLinkedRole",
+        Resource = "*",
+        Condition = {
+          StringEquals = {
+            "iam:AWSServiceName" = "spot.amazonaws.com"
+          }
+        }
+      }
+    ]
+  })
+
+  tags = local.tags
+}
+
+# Attach the additional policy to EMR service role
+resource "aws_iam_role_policy_attachment" "emr_service_additional_attachment" {
+  role       = aws_iam_role.emr_service_role.name
+  policy_arn = aws_iam_policy.emr_service_additional_policy.arn
+}
+
 # Create EMR Instance Profile Role 
 resource "aws_iam_role" "emr_ec2_role" {
   name = "EMR_EC2_DefaultRole"

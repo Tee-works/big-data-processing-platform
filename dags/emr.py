@@ -14,7 +14,7 @@ DEFAULT_ARGS = {
     "email_on_failure": True,
     "email_on_retry": False,
     "retries": 1,
-    "retry_delay": timedelta(seconds=3),
+    "retry_delay": timedelta(seconds=5),
 }
 
 JOB_FLOW_OVERRIDES = {
@@ -38,12 +38,12 @@ JOB_FLOW_OVERRIDES = {
                 "InstanceCount": 2,
             },
         ],
-        "KeepJobFlowAliveWhenNoSteps": False,
+        "KeepJobFlowAliveWhenNoSteps": True,
         "TerminationProtected": False,
         "Ec2KeyName": "cyberdom-key",
         "Ec2SubnetId": "subnet-0dbe896802db6824b",
-        "EmrManagedMasterSecurityGroup": "sg-0e58528ec849d645d",
-        "EmrManagedSlaveSecurityGroup": "sg-0e58528ec849d645d",
+        # "EmrManagedMasterSecurityGroup": "sg-0e58528ec849d645d",
+        # "EmrManagedSlaveSecurityGroup": "sg-0e58528ec849d645d",
     },
     "VisibleToAllUsers": True,
     "JobFlowRole": "EMR_EC2_DefaultRole",
@@ -54,7 +54,7 @@ JOB_FLOW_OVERRIDES = {
 SPARK_STEPS = [
     {
         "Name": "average_salary",
-        "ActionOnFailure": "CANCEL_AND_WAIT",
+        "ActionOnFailure": "CONTINUE",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
             "Args": [
@@ -69,7 +69,7 @@ SPARK_STEPS = [
 
 with DAG(
     dag_id="big_data_pipeline_DAG",
-    description="Managed Apache Airflow orchestrates Spark",
+    description="Managed Apache Airflow orchestrates Spark workflow ",
     default_args=DEFAULT_ARGS,
     start_date=datetime(2025, 4, 14),
     schedule_interval=timedelta(days=1),
@@ -93,6 +93,7 @@ with DAG(
         ),
         aws_conn_id="aws_default",
         steps=SPARK_STEPS,
+        wait_for_completion=True,
     )
 
     check_step = EmrStepSensor(
@@ -104,16 +105,16 @@ with DAG(
         step_id=(
             "{{ task_instance.xcom_pull(task_ids='submit_spark_application', "
             "key='return_value')[0] }}"
-        ),
+            ),
         aws_conn_id="aws_default",
     )
 
     remove_cluster = EmrTerminateJobFlowOperator(
         task_id="terminate_emr_cluster",
         job_flow_id=(
-            "{{ task_instance.xcom_pull(task_ids='create_emr_cluster', "
+            "{{ task_instance.xcom_pull(task_ids='create_emr_cluster',"
             "key='return_value') }}"
-        ),
+            ),
         aws_conn_id="aws_default",
         trigger_rule=TriggerRule.ALL_DONE,
     )
