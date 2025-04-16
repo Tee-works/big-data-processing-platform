@@ -61,7 +61,7 @@ SPARK_STEPS = [
                 "spark-submit",
                 "--deploy-mode",
                 "client",
-                "s3://big-data-bck/etl/avg_sal_etl.py",
+                "s3://big-data-bck/etl/test_etl.py",
             ],
         },
     }
