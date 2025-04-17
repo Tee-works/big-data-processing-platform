@@ -99,3 +99,4 @@ variable "s3_objects" {
   default     = ["etl/", "dags/", "logs/"]
 
 }
+

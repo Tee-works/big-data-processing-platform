@@ -7,3 +7,4 @@ terraform/terraform.tfstate.backup
 architecture.dio
 terraform/user_credentials.json
 terraform/errored.tfstate
+terraform/certificates

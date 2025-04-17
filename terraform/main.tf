@@ -21,7 +21,7 @@ module "vpc" {
 }
 
 # Subnets 
-module "vpc_public_a_subnet" {
+module "vpn_target_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
@@ -50,7 +50,7 @@ module "vpc_private_a_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
-  cidr_block              = "10.100.2.0/24"
+  cidr_block              = "10.100.3.0/24"
   availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-a"
@@ -63,13 +63,106 @@ module "vpc_private_b_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
   vpc_id                  = module.vpc.vpc_id
-  cidr_block              = "10.100.3.0/24"
+  cidr_block              = "10.100.4.0/24"
   availability_zone       = "${var.aws_region}b"
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-b"
   route_table_id          = module.vpc.private_route_table_id
   tags                    = local.tags
 }
+
+resource "aws_acm_certificate" "server_certificate" {
+  private_key       = file("certificates/vpn.example.com.key")
+  certificate_body  = file("certificates/vpn.example.com.crt")
+  certificate_chain = file("certificates/ca.crt")
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-server-cert"
+    }
+  )
+}
+
+resource "aws_acm_certificate" "client_certificate" {
+  private_key       = file("certificates/client1.domain.tld.key")
+  certificate_body  = file("certificates/client1.domain.tld.crt")
+  certificate_chain = file("certificates/ca.crt")
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-client-cert"
+    }
+  )
+}
+
+resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
+  description            = "Big data client VPN"
+  server_certificate_arn = aws_acm_certificate.server_certificate.arn
+  client_cidr_block      = "10.0.0.0/16"
+  split_tunnel           = true
+  vpc_id                 = module.vpc.vpc_id
+  security_group_ids     = [module.vpn_target_subnet_sg.security_group_id]
+  client_login_banner_options {
+    banner_text = "Welcome to the VPN"
+    enabled     = true
+  }
+
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-client-vpn"
+    }
+  )
+
+  authentication_options {
+    type                       = "certificate-authentication"
+    root_certificate_chain_arn = aws_acm_certificate.client_certificate.arn
+  }
+
+  connection_log_options {
+    enabled               = true
+    cloudwatch_log_group  = aws_cloudwatch_log_group.logs.name
+    cloudwatch_log_stream = aws_cloudwatch_log_stream.log_stream.name
+  }
+}
+
+
+resource "aws_ec2_client_vpn_network_association" "aws_ec2_client_vpn_network_association" {
+  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
+  subnet_id              = module.vpn_target_subnet.subnet_id
+
+}
+
+resource "aws_ec2_client_vpn_authorization_rule" "client_vpn_auth_rule" {
+  client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
+  target_network_cidr    = var.cidr_block
+  authorize_all_groups   = true
+  description            = "Allow access to all groups"
+}
+
+module "vpn_target_subnet_sg" {
+  source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/security?ref=v1.0.0"
+
+  vpc_id              = module.vpc.vpc_id
+  security_group_name = "${module.vpc.vpc_name}-vpn-target-subnet-sg"
+  description         = "Allow  all protocols outbound traffic"
+
+  ingress_rules = {
+    https = {
+      cidr_ipv4   = "10.0.0.0/16"
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      description = "Allow SSH from VPN clients"
+    },
+  }
+  egress_rules = {
+    all = {
+      cidr_ipv4   = "0.0.0.0/0"
+      ip_protocol = "-1"
+    }
+  }
+
+  tags = local.tags
+}
+
 
 # Security Groups
 module "vpc_public_sg" {
@@ -81,19 +174,27 @@ module "vpc_public_sg" {
 
   ingress_rules = {
     https = {
-      cidr_ipv4   = "0.0.0.0/0"
+      cidr_ipv4   = var.cidr_block
       from_port   = 443
       to_port     = 443
       ip_protocol = "tcp"
-      description = "Allow HTTPS from anywhere"
+      description = "Allow HTTPS from ${var.cidr_block}"
     },
 
     http = {
-      cidr_ipv4   = "0.0.0.0/0"
+      cidr_ipv4   = var.cidr_block
       from_port   = 80
       to_port     = 80
       ip_protocol = "tcp"
-      description = "Allow HTTP from anywhere"
+      description = "Allow HTTP from ${var.cidr_block}"
+    }
+
+    ssh = {
+      cidr_ipv4   = var.cidr_block
+      from_port   = 22
+      to_port     = 22
+      ip_protocol = "tcp"
+      description = "Allow ssh from ${var.cidr_block}"
     }
   }
 
@@ -290,155 +391,10 @@ resource "aws_cloudwatch_log_group" "logs" {
   )
 }
 
-
-# Certificate Manager
-# resource "aws_acm_certificate" "cert" {
-#   domain_name       = "decjobboard.online"
-#   validation_method = "DNS"
-
-#   lifecycle {
-#     prevent_destroy = true
-#   }
-
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-cert"
-#   }
-#   )
-# }
-
-
-# resource "aws_acm_certificate_validation" "cert_validation" {
-#   certificate_arn         = aws_acm_certificate.cert.arn
-#   validation_record_fqdns = [for record in aws_route53_record.acm_validation : record.fqdn]
-
-#   # lifecycle {
-#   #   prevent_destroy = true
-#   # }
-# }
-
-# Route 53
-# resource "aws_route53_zone" "hosted_zone" {
-#   name = "decjobboard.online"
-
-#   tags = local.tags
-# }
-
-# resource "aws_route53_record" "alias" {
-#   zone_id = aws_route53_zone.hosted_zone.id
-#   name    = "decjobboard.online"
-#   type    = "A"
-
-#   alias {
-#     name    = aws_lb.airflow_alb.dns_name
-#     zone_id = aws_lb.airflow_alb.zone_id
-
-#     evaluate_target_health = true
-#   }
-
-#   # lifecycle {
-#   #   prevent_destroy = true
-#   # }
-# }
-
-# Create DNS validation records for the certificate
-# resource "aws_route53_record" "acm_validation" {
-#   for_each = {
-#     for dvo in aws_acm_certificate.cert.domain_validation_options : dvo.domain_name => {
-#       name   = dvo.resource_record_name
-#       record = dvo.resource_record_value
-#       type   = dvo.resource_record_type
-#     }
-#   }
-
-#   allow_overwrite = true
-#   name            = each.value.name
-#   records         = [each.value.record]
-#   ttl             = 60
-#   type            = each.value.type
-#   zone_id         = aws_route53_zone.hosted_zone.zone_id
-
-#   # lifecycle {
-#   #   prevent_destroy = true
-#   # }
-# }
-
-# Application Load Balancer
-# resource "aws_lb" "airflow_alb" {
-#   name               = "${var.project_name}-alb"
-#   internal           = false
-#   load_balancer_type = "application"
-#   security_groups    = [module.vpc_public_sg.security_group_id]
-#   subnets            = [module.vpc_public_a_subnet.subnet_id, module.vpc_public_b_subnet.subnet_id]
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-alb"
-#   }
-#   )
-# }
-
-
-# resource "aws_lb_target_group" "airflow_tg" {
-#   name        = "${var.project_name}-airflow-tg"
-#   port        = 443
-#   protocol    = "HTTPS"
-#   vpc_id      = module.vpc.vpc_id
-#   target_type = "ip"
-
-#   health_check {
-#     path                = "/health"
-#     protocol            = "HTTPS"
-#     interval            = 30
-#     timeout             = 5
-#     healthy_threshold   = 2
-#     unhealthy_threshold = 2
-#     matcher             = "200, 300"
-#   }
-
-
-#   stickiness {
-#     type = "lb_cookie"
-#   }
-
-# }
-
-# Register IP addresses with the target group
-# resource "aws_lb_target_group_attachment" "airflow_tg_attachment" {
-#   for_each = {
-#     for idx, nic in data.aws_network_interface.mwaa_webserver_eni :
-#     idx => nic.private_ip
-#   }
-
-#   target_group_arn = aws_lb_target_group.airflow_tg.arn
-#   target_id        = each.value
-#   port             = 443
-# }
-
-# resource "aws_lb_listener" "airflow_https" {
-#   load_balancer_arn = aws_lb.airflow_alb.arn
-#   port              = 443
-#   protocol          = "HTTPS"
-#   ssl_policy        = "ELBSecurityPolicy-2016-08"
-#   certificate_arn   = aws_acm_certificate.cert.arn
-
-#   default_action {
-#     type             = "forward"
-#     target_group_arn = aws_lb_target_group.airflow_tg.arn
-#   }
-# }
-
-# resource "aws_lb_listener" "airflow_http_redirect" {
-#   load_balancer_arn = aws_lb.airflow_alb.arn
-#   port              = 80
-#   protocol          = "HTTP"
-
-#   default_action {
-#     type = "redirect"
-#     redirect {
-#       port        = "443"
-#       protocol    = "HTTPS"
-#       status_code = "HTTP_301"
-#     }
-#   }
-# }
+resource "aws_cloudwatch_log_stream" "log_stream" {
+  name           = "Client_VPN-stream"
+  log_group_name = aws_cloudwatch_log_group.logs.name
+}
 
 # S3
 
@@ -500,7 +456,7 @@ resource "aws_iam_role" "emr_service_role" {
   tags = local.tags
 }
 
-# Attach EMR service managed policy
+# # Attach EMR service managed policy
 resource "aws_iam_role_policy_attachment" "emr_service_role_attachment" {
   role       = aws_iam_role.emr_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2"
@@ -519,7 +475,7 @@ resource "aws_iam_policy" "emr_service_additional_policy" {
           "ec2:*",
         ],
         Resource = "*"
-      }, 
+      },
       {
         Effect   = "Allow",
         Action   = "iam:CreateServiceLinkedRole",
@@ -536,7 +492,7 @@ resource "aws_iam_policy" "emr_service_additional_policy" {
   tags = local.tags
 }
 
-# Attach the additional policy to EMR service role
+# # Attach the additional policy to EMR service role
 resource "aws_iam_role_policy_attachment" "emr_service_additional_attachment" {
   role       = aws_iam_role.emr_service_role.name
   policy_arn = aws_iam_policy.emr_service_additional_policy.arn
@@ -562,13 +518,13 @@ resource "aws_iam_role" "emr_ec2_role" {
   tags = local.tags
 }
 
-# Attach EMR EC2 instance profile managed policy
+# # Attach EMR EC2 instance profile managed policy
 resource "aws_iam_role_policy_attachment" "emr_ec2_role_attachment" {
   role       = aws_iam_role.emr_ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
 }
 
-# Create IAM instance profile for EMR EC2 instances
+# # Create IAM instance profile for EMR EC2 instances
 resource "aws_iam_instance_profile" "emr_ec2_instance_profile" {
   name = "EMR_EC2_DefaultRole"
   role = aws_iam_role.emr_ec2_role.name
@@ -595,58 +551,58 @@ resource "aws_iam_role_policy_attachment" "mwaa_policy_attachment" {
 
 
 # MWAA Environment
-# resource "aws_mwaa_environment" "big_data" {
-#   name                   = "${var.project_name}-mwaa"
-#   execution_role_arn     = aws_iam_role.mwaa_execution_role.arn
-#   dag_s3_path            = "dags/"
-#   source_bucket_arn      = module.s3_bucket.bucket_arn
-#   environment_class      = "mw1.small"
-#   startup_script_s3_path = "scripts/mwaa_startup.sh"
-#   webserver_access_mode  = "PUBLIC_ONLY"
+resource "aws_mwaa_environment" "big_data" {
+  name                   = "${var.project_name}-mwaa"
+  execution_role_arn     = aws_iam_role.mwaa_execution_role.arn
+  dag_s3_path            = "dags/"
+  source_bucket_arn      = module.s3_bucket.bucket_arn
+  environment_class      = "mw1.small"
+  startup_script_s3_path = "scripts/mwaa_startup.sh"
+  webserver_access_mode  = "PRIVATE_ONLY"
 
 
-#   airflow_configuration_options = {
-#     "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
-#     "email.default_email_on_retry"   = "True"
-#     "email.default_email_on_failure" = "True"
-#   }
+  airflow_configuration_options = {
+    "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
+    "email.default_email_on_retry"   = "True"
+    "email.default_email_on_failure" = "True"
+  }
 
-#   logging_configuration {
-#     dag_processing_logs {
-#       enabled   = true
-#       log_level = "DEBUG"
-#     }
-#     scheduler_logs {
-#       enabled   = true
-#       log_level = "DEBUG"
-#     }
-#     task_logs {
-#       enabled   = true
-#       log_level = "DEBUG"
-#     }
-#     webserver_logs {
-#       enabled   = true
-#       log_level = "DEBUG"
-#     }
-#     worker_logs {
-#       enabled   = true
-#       log_level = "DEBUG"
-#     }
-#   }
+  logging_configuration {
+    dag_processing_logs {
+      enabled   = true
+      log_level = "DEBUG"
+    }
+    scheduler_logs {
+      enabled   = true
+      log_level = "DEBUG"
+    }
+    task_logs {
+      enabled   = true
+      log_level = "DEBUG"
+    }
+    webserver_logs {
+      enabled   = true
+      log_level = "DEBUG"
+    }
+    worker_logs {
+      enabled   = true
+      log_level = "DEBUG"
+    }
+  }
 
-#   network_configuration {
-#     security_group_ids = [module.vpc_private_sg.security_group_id]
-#     subnet_ids = [
-#       module.vpc_private_a_subnet.subnet_id,
-#       module.vpc_private_b_subnet.subnet_id
-#     ]
-#   }
+  network_configuration {
+    security_group_ids = [module.vpc_private_sg.security_group_id]
+    subnet_ids = [
+      module.vpc_private_a_subnet.subnet_id,
+      module.vpc_private_b_subnet.subnet_id
+    ]
+  }
 
 
-#   depends_on = [aws_iam_role.mwaa_execution_role, aws_iam_policy.mwaa_policy, aws_iam_role_policy_attachment.mwaa_policy_attachment]
+  depends_on = [aws_iam_role.mwaa_execution_role, aws_iam_policy.mwaa_policy, aws_iam_role_policy_attachment.mwaa_policy_attachment]
 
-#   tags = local.tags
-# }
+  tags = local.tags
+}
 
 resource "aws_s3_object" "mwaa_dags_folder" {
   for_each = toset(var.s3_objects)
@@ -656,66 +612,29 @@ resource "aws_s3_object" "mwaa_dags_folder" {
   content = ""
 }
 
-# resource "aws_s3_object" "mwaa_startup_script" {
-#   bucket = var.aws_bucket_name
-#   key    = "scripts/mwaa_startup.sh"
+resource "aws_s3_object" "mwaa_startup_script" {
+  bucket = var.aws_bucket_name
+  key    = "scripts/mwaa_startup.sh"
 
-#   content = <<EOF
-# #!/bin/bash
+  content = <<EOF
+#!/bin/bash
 
-# SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
+SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
 
-# MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
-# MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
-# MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
-# MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
-# MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
+MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
+MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
+MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
+MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
+MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
 
-# airflow connections add 'smtp_default' \
-#   --conn-type 'smtp' \
-#   --conn-host "$MAIL_SERVER" \
-#   --conn-login "$MAIL_USERNAME" \
-#   --conn-password "$MAIL_PASSWORD" \
-#   --conn-port "$MAIL_PORT" \
-#   --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
-# EOF
-# }
+airflow connections add 'smtp_default' \
+  --conn-type 'smtp' \
+  --conn-host "$MAIL_SERVER" \
+  --conn-login "$MAIL_USERNAME" \
+  --conn-password "$MAIL_PASSWORD" \
+  --conn-port "$MAIL_PORT" \
+  --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
+EOF
+}
 
-# resource "null_resource" "update_mwaa_domain" {
-#   depends_on = [aws_mwaa_environment.big_data, aws_lb.airflow_alb, aws_route53_record.alias]
-
-#   provisioner "local-exec" {
-#     command = <<-EOT
-#       aws mwaa update-environment \
-#         --name ${aws_mwaa_environment.big_data.name} \
-#         --airflow-configuration-options '{"webserver.base_url":"https://decjobboard.online"}' \
-#         --region ${var.aws_region}
-#     EOT
-#   }
-# }
-
-# data "aws_vpc_endpoint" "mwaa_webserver" {
-#   filter {
-#     name   = "service-name"
-#     values = [aws_mwaa_environment.big_data.webserver_vpc_endpoint_service]
-#   }
-
-#   depends_on = [aws_mwaa_environment.big_data]
-# }
-
-# data "aws_network_interface" "mwaa_webserver_eni" {
-#   count = 2  
-
-#   filter {
-#     name   = "vpc-endpoint-id"
-#     values = [data.aws_vpc_endpoint.mwaa_webserver.id]
-#   }
-
-#   filter {
-#     name   = "subnet-id"
-#     values = count.index == 0 ? [module.vpc_private_a_subnet.subnet_id] : [module.vpc_private_b_subnet.subnet_id]
-#   }
-
-#   depends_on = [aws_mwaa_environment.big_data]
-# }
 

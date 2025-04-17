@@ -24,7 +24,7 @@ output "vpc_id" {
 }
 
 output "public_subnet_a_id" {
-  value       = module.vpc_public_a_subnet.subnet_id
+  value       = module.vpn_target_subnet.subnet_id
   description = "Public Subnet A ID"
 }
 
