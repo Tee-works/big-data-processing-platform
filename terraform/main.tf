@@ -17,10 +17,13 @@ module "vpc" {
   create_igw           = true
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = local.tags
+  tags                 = merge(local.tags, {
+    Name = "${var.project_name}-vpc"
+    }
+  )
 }
 
-# Subnets 
+# Subnets for target vpn
 module "vpn_target_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
@@ -30,10 +33,13 @@ module "vpn_target_subnet" {
   map_public_ip_on_launch = true
   subnet_name             = "${module.vpc.vpc_name}-public-a"
   route_table_id          = module.vpc.public_route_table_id
-  tags                    = local.tags
+  tags                    = merge(local.tags, {
+    Name = "${module.vpc.vpc_name}-public-a"
+    }
+  )
 }
 
-
+# Second public subnet
 module "vpc_public_b_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
@@ -43,9 +49,13 @@ module "vpc_public_b_subnet" {
   map_public_ip_on_launch = true
   subnet_name             = "${module.vpc.vpc_name}-public-b"
   route_table_id          = module.vpc.public_route_table_id
-  tags                    = local.tags
+  tags                    = merge(local.tags, {
+    Name = "${module.vpc.vpc_name}-public-b"
+    }
+  )
 }
 
+# private subnet
 module "vpc_private_a_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
@@ -55,10 +65,13 @@ module "vpc_private_a_subnet" {
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-a"
   route_table_id          = module.vpc.private_route_table_id
-  tags                    = local.tags
+  tags                    = merge(local.tags, {
+    Name = "${module.vpc.vpc_name}-private-a"
+    }
+  )
 }
 
-
+# second private subnet
 module "vpc_private_b_subnet" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/subnets?ref=v1.0.0"
 
@@ -68,9 +81,12 @@ module "vpc_private_b_subnet" {
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-b"
   route_table_id          = module.vpc.private_route_table_id
-  tags                    = local.tags
+  tags                    = merge(local.tags, {
+    Name = "${module.vpc.vpc_name}-private-b"
+    }
+  )
 }
-
+# importing generated server certificate 
 resource "aws_acm_certificate" "server_certificate" {
   private_key       = file("certificates/vpn.example.com.key")
   certificate_body  = file("certificates/vpn.example.com.crt")
@@ -82,6 +98,7 @@ resource "aws_acm_certificate" "server_certificate" {
   )
 }
 
+# importing generated client certificate
 resource "aws_acm_certificate" "client_certificate" {
   private_key       = file("certificates/client1.domain.tld.key")
   certificate_body  = file("certificates/client1.domain.tld.crt")
@@ -93,15 +110,16 @@ resource "aws_acm_certificate" "client_certificate" {
   )
 }
 
+# creating vpn endpoint
 resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
-  description            = "Big data client VPN"
+  description            = "BuildItAll client VPN"
   server_certificate_arn = aws_acm_certificate.server_certificate.arn
   client_cidr_block      = "10.0.0.0/16"
   split_tunnel           = true
   vpc_id                 = module.vpc.vpc_id
   security_group_ids     = [module.vpn_target_subnet_sg.security_group_id]
   client_login_banner_options {
-    banner_text = "Welcome to the VPN"
+    banner_text = "Welcome to the BuildItAll VPN"
     enabled     = true
   }
 
@@ -123,13 +141,14 @@ resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
   }
 }
 
-
+# Creating a client VPN network association
 resource "aws_ec2_client_vpn_network_association" "aws_ec2_client_vpn_network_association" {
   client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
   subnet_id              = module.vpn_target_subnet.subnet_id
 
 }
 
+# Creating a client VPN authorization rule
 resource "aws_ec2_client_vpn_authorization_rule" "client_vpn_auth_rule" {
   client_vpn_endpoint_id = aws_ec2_client_vpn_endpoint.client_vpn.id
   target_network_cidr    = var.cidr_block
@@ -137,12 +156,13 @@ resource "aws_ec2_client_vpn_authorization_rule" "client_vpn_auth_rule" {
   description            = "Allow access to all groups"
 }
 
+# Creating a client VPN security group
 module "vpn_target_subnet_sg" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/security?ref=v1.0.0"
 
   vpc_id              = module.vpc.vpc_id
   security_group_name = "${module.vpc.vpc_name}-vpn-target-subnet-sg"
-  description         = "Allow  all protocols outbound traffic"
+  description         = "Allow  all protocols outbound traffic and HTTPS inbound traffic only from cidr range"
 
   ingress_rules = {
     https = {
@@ -150,7 +170,7 @@ module "vpn_target_subnet_sg" {
       from_port   = 443
       to_port     = 443
       ip_protocol = "tcp"
-      description = "Allow SSH from VPN clients"
+      description = "Allow HTTPS from VPN client"
     },
   }
   egress_rules = {
@@ -160,17 +180,20 @@ module "vpn_target_subnet_sg" {
     }
   }
 
-  tags = local.tags
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-vpn-target-subnet-sg"
+    }
+  )
 }
 
 
-# Security Groups
+# Security Groups for public and private subnets
 module "vpc_public_sg" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/security?ref=v1.0.0"
 
   vpc_id              = module.vpc.vpc_id
   security_group_name = "${module.vpc.vpc_name}-public-sg"
-  description         = "Allow HTTPS inbound traffic from the internet and all protocols outbound traffic"
+  description         = "Allow HTTPS inbound traffic only from cidr range and all protocols outbound traffic"
 
   ingress_rules = {
     https = {
@@ -247,7 +270,7 @@ resource "aws_vpc_endpoint" "s3" {
     }
   )
 }
-
+# Interface Endpoints
 resource "aws_vpc_endpoint" "logs" {
   vpc_id              = module.vpc.vpc_id
   service_name        = "com.amazonaws.${var.aws_region}.logs"
@@ -277,28 +300,13 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 }
 
 
-resource "aws_vpc_endpoint" "emr" {
-  vpc_id              = module.vpc.vpc_id
-  service_name        = "com.amazonaws.${var.aws_region}.elasticmapreduce"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
-  security_group_ids  = [module.vpc_private_sg.security_group_id]
-  private_dns_enabled = true
-
-  tags = merge(local.tags, {
-    Name = "${var.project_name}-emr-interface-endpoint"
-    }
-  )
-
-}
-
 # IAM 
 resource "aws_iam_group" "group" {
   name = var.group_name
 
 
 }
-
+# Creating IAM users and attaching them to the group
 resource "aws_iam_user" "users" {
   for_each = toset(var.users)
 
@@ -320,7 +328,7 @@ resource "aws_iam_user_group_membership" "users_to_group" {
 
 }
 
-
+# Creating IAM login profile for users
 resource "aws_iam_user_login_profile" "users" {
   for_each = toset(var.users)
 
@@ -330,14 +338,14 @@ resource "aws_iam_user_login_profile" "users" {
 
 }
 
-
+# Creating IAM access keys for users
 resource "aws_iam_access_key" "users" {
   for_each = var.create_access_keys ? toset(var.users) : []
 
   user = aws_iam_user.users[each.value].name
 }
 
-
+# Creating IAM policy for the group
 resource "aws_iam_policy" "combined_policy" {
   name        = "${var.group_name}-CombinedPolicy"
   description = "policy for ${var.group_name} with read access to services"
@@ -346,12 +354,14 @@ resource "aws_iam_policy" "combined_policy" {
   policy = templatefile("./policies/policy.json", {
     s3_bucket_arn  = module.s3_bucket.bucket_arn
     s3_object_arns = ["${module.s3_bucket.bucket_arn}/*"]
+    cloudwatch_log_group_arn = aws_cloudwatch_log_group.logs.arn
+    mwaa_arn = aws_mwaa_environment.big_data.arn
 
 
   })
 }
 
-
+# # Attach the policy to the group
 resource "aws_iam_group_policy_attachment" "policy_attachment" {
   group      = aws_iam_group.group.name
   policy_arn = aws_iam_policy.combined_policy.arn
@@ -369,6 +379,7 @@ resource "aws_secretsmanager_secret" "security_manager" {
 
 }
 
+# # Secret Manager version
 resource "aws_secretsmanager_secret_version" "secret_version" {
   secret_id = aws_secretsmanager_secret.security_manager.id
   secret_string = jsonencode({
@@ -391,6 +402,7 @@ resource "aws_cloudwatch_log_group" "logs" {
   )
 }
 
+# CloudWatch Log Stream
 resource "aws_cloudwatch_log_stream" "log_stream" {
   name           = "Client_VPN-stream"
   log_group_name = aws_cloudwatch_log_group.logs.name
@@ -411,6 +423,7 @@ module "s3_bucket" {
   )
 }
 
+# mwa execution role
 resource "aws_iam_role" "mwaa_execution_role" {
   name = "${var.project_name}-mwaa-execution-role"
 
@@ -462,6 +475,7 @@ resource "aws_iam_role_policy_attachment" "emr_service_role_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2"
 }
 
+# # Attach EMR EC2 instance profile managed policy
 resource "aws_iam_policy" "emr_service_additional_policy" {
   name        = "EMR_ServiceAdditionalPermissions"
   description = "Additional permissions for EMR service role to create EC2 resources"
@@ -518,18 +532,19 @@ resource "aws_iam_role" "emr_ec2_role" {
   tags = local.tags
 }
 
-# # Attach EMR EC2 instance profile managed policy
+# Attach EMR EC2 instance profile managed policy
 resource "aws_iam_role_policy_attachment" "emr_ec2_role_attachment" {
   role       = aws_iam_role.emr_ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
 }
 
-# # Create IAM instance profile for EMR EC2 instances
+# Create IAM instance profile for EMR EC2 instances
 resource "aws_iam_instance_profile" "emr_ec2_instance_profile" {
   name = "EMR_EC2_DefaultRole"
   role = aws_iam_role.emr_ec2_role.name
 }
 
+# mwa customer managed policy
 resource "aws_iam_policy" "mwaa_policy" {
   name        = "${var.project_name}-mwaa-policy"
   description = "Permissions for MWAA to access S3, CloudWatch, EMR, and Secrets Manager"
@@ -543,7 +558,7 @@ resource "aws_iam_policy" "mwaa_policy" {
   })
 }
 
-
+# Attach the MWAA policy to the execution role
 resource "aws_iam_role_policy_attachment" "mwaa_policy_attachment" {
   role       = aws_iam_role.mwaa_execution_role.name
   policy_arn = aws_iam_policy.mwaa_policy.arn
@@ -604,6 +619,7 @@ resource "aws_mwaa_environment" "big_data" {
   tags = local.tags
 }
 
+# S3 bucket objects
 resource "aws_s3_object" "mwaa_dags_folder" {
   for_each = toset(var.s3_objects)
 
@@ -612,6 +628,7 @@ resource "aws_s3_object" "mwaa_dags_folder" {
   content = ""
 }
 
+# S3 bucket object for the startup script
 resource "aws_s3_object" "mwaa_startup_script" {
   bucket = var.aws_bucket_name
   key    = "scripts/mwaa_startup.sh"

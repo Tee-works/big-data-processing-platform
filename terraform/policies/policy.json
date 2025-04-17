@@ -15,19 +15,7 @@
           "logs:GetLogEvents",
           "logs:GetQueryResults"
         ],
-        "Resource": "*"
-      },
-      {
-        "Sid": "CloudWatchLogsDenyDestructiveActions",
-        "Effect": "Deny",
-        "Action": [
-          "logs:DeleteLogGroup",
-          "logs:DeleteLogStream",
-          "logs:DeleteMetricFilter",
-          "logs:DeleteRetentionPolicy",
-          "logs:DeleteSubscriptionFilter"
-        ],
-        "Resource": "*"
+        "Resource": ["${cloudwatch_log_group_arn}"]
       },
       {
         "Sid": "EMRReadAccess",
@@ -41,19 +29,6 @@
         "Resource": "*"
       },
       {
-        "Sid": "EMRDenyDestructiveActions",
-        "Effect": "Deny",
-        "Action": [
-          "elasticmapreduce:TerminateJobFlows",
-          "elasticmapreduce:RemoveAutoScalingPolicy",
-          "elasticmapreduce:RemoveTags",
-          "elasticmapreduce:DeleteSecurityConfiguration",
-          "elasticmapreduce:DeleteStudio",
-          "elasticmapreduce:DeleteEditor"
-        ],
-        "Resource": "*"
-      },
-      {
         "Sid": "MWAAReadAccess",
         "Effect": "Allow",
         "Action": [
@@ -63,17 +38,7 @@
           "airflow:CreateCliToken",
           "airflow:CreateWebLoginToken"
         ],
-        "Resource": "*"
-      },
-      {
-        "Sid": "MWAADenyDestructiveActions",
-        "Effect": "Deny",
-        "Action": [
-          "airflow:DeleteEnvironment",
-          "airflow:UpdateEnvironment",
-          "airflow:CreateEnvironment"
-        ],
-        "Resource": "*"
+        "Resource": ["${mwaa_arn}"]
       },
       {
         "Sid": "S3BucketsListAccess",
@@ -98,22 +63,6 @@
           "s3:ListMultipartUploadParts"
         ],
         "Resource": ["${s3_bucket_arn}/*"]
-      },
-      {
-        "Sid": "S3DenyDestructiveActions",
-        "Effect": "Deny",
-        "Action": [
-          "s3:DeleteObject",
-          "s3:DeleteObjectVersion",
-          "s3:DeleteBucket",
-          "s3:PutObjectAcl",
-          "s3:PutObjectVersionAcl",
-          "s3:RestoreObject"
-        ],
-        "Resource": [
-          "${s3_bucket_arn}",
-          "${s3_bucket_arn}/*"
-        ]
       }
     ]
   }
