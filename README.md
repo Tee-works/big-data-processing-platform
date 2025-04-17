@@ -22,15 +22,14 @@ Our team at BuildItAll took on this challenge as our first major project post-fu
 3. [Infrastructure as Code](#infrastructure-as-code)
 4. [AWS Services Used](#aws-services-used)
 5. [Security Implementation](#security-implementation)
-6. [Network Architecture](#network-architecture)
-7. [Data Processing Pipeline](#data-processing-pipeline)
-8. [Setup and Installation](#setup-and-installation)
-9. [Monitoring and Logging](#monitoring-and-logging)
-10. [Cost Optimization](#cost-optimization)
-11. [Best Practices](#best-practices)
-12. [Troubleshooting](#troubleshooting)
-13. [Contributing](#contributing)
-14. [License](#license)
+6. [Data Processing Pipeline](#data-processing-pipeline)
+7. [Setup and Installation](#setup-and-installation)
+8. [Monitoring and Logging](#monitoring-and-logging)
+9. [Cost Optimization](#cost-optimization)
+10. [Best Practices](#best-practices)
+11. [Troubleshooting](#troubleshooting)
+12. [Contributing](#contributing)
+13. [Resources and Documentations](#resources-and-documentations)
 
 ## Project Overview
 
@@ -75,12 +74,12 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
      - `etl/` - For ETL scripts and configurations
      - `dags/` - For Airflow DAG definitions
      - `logs/` - For application and system logs
-   - RDS for metadata storage (10.100.3.0/24)
+   - RDS for data storage (10.100.3.0/24)
 
 4. **Security Layer**
    - VPC endpoints for secure service access
    - IAM roles and policies
-   - Security groups and NACLs
+   - Security groups 
    - Certificate-based VPN authentication
 
 ### Why These Services?
@@ -136,7 +135,7 @@ terraform/
 
 2. **Subnets**
    - VPN Target Subnet: 10.100.0.0/24 (Public)
-   - Load Balancer Subnet: 10.100.1.0/24 (Public)
+   - Application Subnet: 10.100.1.0/24 (Public)
    - EMR Subnet: 10.100.2.0/24 (Private)
    - RDS Subnet: 10.100.3.0/24 (Private)
 
@@ -176,7 +175,7 @@ terraform/
 1. **Network Security**
    - VPC isolation
    - Private subnets for processing
-   - Security groups and NACLs
+   - Security groups 
    - VPN access
 
 2. **Access Control**
@@ -251,30 +250,21 @@ big-data-platform/
 ├── .github/
 │   └── workflows/          # CI/CD pipeline definitions
 ├── terraform/
-│   ├── modules/           # Reusable infrastructure components
-│   ├── environments/      # Environment-specific configurations
-│   └── variables/         # Variable definitions
-├── spark/
-│   ├── jobs/             # Spark job definitions
-│   ├── config/           # Spark configurations
-│   └── tests/            # Unit tests for Spark jobs
-├── airflow/
-│   ├── dags/             # Airflow DAG definitions
-│   └── plugins/          # Custom Airflow plugins
-├── scripts/
-│   ├── setup/            # Setup and installation scripts
-│   └── utilities/        # Utility scripts
+│   ├── policies/           # IAM Policies components
+├── images/
+├── dags/
+├── etl/
 ├── tests/                # Integration tests
-├── docs/                 # Additional documentation
-└── README.md            # This file
+├── .gitignore                 # git ignore file
+└── README.md            # Project Documentation
 ```
 
 ## Setup and Installation
 
 1. **Clone the Repository**
    ```bash
-   git clone https://github.com/your-org/big-data-platform.git
-   cd big-data-platform
+   git clone https://github.com/Tee-works/big-data-processing-platform.git
+   cd big-data-processing-platform
    ```
 
 2. **Install Dependencies**
@@ -325,21 +315,89 @@ big-data-platform/
 
 ## CI/CD Pipeline
 
-1. **GitHub Actions Workflow**
-   - Code validation
-   - Unit testing
-   - Infrastructure validation
-   - Deployment automation
 
-2. **Testing Stages**
-   - Unit tests
-   - Integration tests
-   - Infrastructure tests
+This documenttion describes the Continuous Integration and Continuous Deployment (CI/CD) workflow implemented through GitHub Actions. The workflow automatically runs when changes are pushed to the `main` branch, specifically when files in the `dags/`, `terraform/`, or `etl/` directories are modified.
 
-3. **Deployment Environments**
-   - Development
-   - Staging
-   - Production
+## Workflow Triggers
+
+The workflow is triggered on:
+- **Push events** to the `main` branch
+- Only when changes affect files in these paths:
+  - `dags/**`
+  - `terraform/**`
+  - `etl/**`
+
+## Jobs
+
+### 1. Lint PySpark (`lint-pyspark`)
+
+This job validates Python code quality in the PySpark files.
+
+**Environment:**
+- Runs on: Ubuntu latest
+- Python version: 3.10
+
+**Steps:**
+1. Checkout repository code
+2. Set up Python 3.10 environment
+3. Install linting tools:
+   - `flake8`: Checks for code style and quality issues
+   - `isort`: Validates import sorting
+4. Run `flake8` on `dags/` and `etl/` directories
+5. Run `isort` in check-only mode on `dags/` and `etl/` directories
+
+### 2. Terraform Lint (`terraform-lint`)
+
+This job validates Terraform configuration files for best practices and potential errors.
+
+**Environment:**
+- Runs on: Ubuntu latest
+
+**Steps:**
+1. Checkout repository code
+2. Install TFLint using the official installation script
+3. Run TFLint in the `terraform` directory to validate configurations
+
+### 3. Sync DAGs to S3 (`sync-dags`)
+
+This job uploads Airflow DAG files and ETL scripts to an S3 bucket, but only after the PySpark linting job passes successfully.
+
+**Dependencies:**
+- Requires successful completion of `lint-pyspark` job
+
+**Environment:**
+- Runs on: Ubuntu latest
+- Environment variables:
+  - `BUCKET_NAME`: Set to `big-data-bck`
+
+**Steps:**
+1. Checkout repository code
+2. Configure AWS credentials using secrets stored in GitHub:
+   - AWS Access Key ID
+   - AWS Secret Access Key
+   - AWS Region: `eu-north-1`
+3. Sync files to S3:
+   - Copy `dags/` directory to `s3://big-data-bck/dags/`
+   - Copy `etl/` directory to `s3://big-data-bck/etl/`
+
+## Security Considerations
+
+- AWS credentials are stored as GitHub secrets
+- No sensitive information is exposed in the workflow file
+
+## Usage Notes
+
+1. Ensure AWS secrets (`AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`) are configured in your GitHub repository settings
+2. The IAM user associated with these credentials should have permissions to write to the specified S3 bucket
+3. This workflow only triggers on changes to specific directories to avoid unnecessary runs
+
+## Troubleshooting
+
+If the workflow fails:
+
+1. **Linting failures**: Check the job logs for specific code style issues that need to be fixed
+2. **AWS authentication errors**: Verify that your GitHub secrets are correctly configured
+3. **S3 sync failures**: Ensure the IAM user has sufficient permissions to write to the bucket
 
 ## Monitoring and Logging
 
@@ -397,9 +455,13 @@ Common issues and their solutions:
 3. Submit a pull request
 4. Follow coding standards
 
-## License
+## Resources and Documentations
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
+- [AWS Documentation on Client VPN](https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/cvpn-getting-started.html)
+- [AWS Documentation on Amazon EMR](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-what-is-emr.html)
+- [AWS Documenation on Amazon Managed Workflows for Apache Airflow](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html)
+- [Orchestrating analytics jobs on Amazon EMR Notebooks using Amazon MWAA](https://aws.amazon.com/blogs/big-data/orchestrating-analytics-jobs-on-amazon-emr-notebooks-using-amazon-mwaa/)
+- [Building and operating data pipelines at scale using CI/CD, Amazon MWAA and Apache Spark on Amazon EMR by Wipro](https://aws.amazon.com/blogs/big-data/building-and-operating-data-pipelines-at-scale-using-ci-cd-amazon-mwaa-and-apache-spark-on-amazon-emr-by-wipro/)
+- [Terraform Documentatio for AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 ---
-For more information, contact the BuildItAll Data Engineering Team.
+For more information, contact the repo owner.
