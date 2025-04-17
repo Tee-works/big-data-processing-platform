@@ -13,7 +13,7 @@ Our team at BuildItAll took on this challenge as our first major project post-fu
 ### Core Development Team
 - **Ifeanyi** - Analytics Engineer ([GitHub](https://github.com/ioaviator))
 - **Taiwo** - Data Engineer ([GitHub](https://github.com/Tee-works))
-- **Chidera** - Data Engineer ([GitHub](https://github.com/Chideraozigbo))
+- **Chidera** - Data Infrastructure Engineer ([GitHub](https://github.com/Chideraozigbo))
 
 
 ## Table of Contents
@@ -29,7 +29,8 @@ Our team at BuildItAll took on this challenge as our first major project post-fu
 10. [Best Practices](#best-practices)
 11. [Troubleshooting](#troubleshooting)
 12. [Contributing](#contributing)
-13. [Resources and Documentations](#resources-and-documentations)
+13. [Key Takeaways](#key-takeaways)
+14. [Resources and Documentations](#resources-and-documentations)
 
 ## Project Overview
 
@@ -66,7 +67,7 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
 
 2. **Processing Layer**
    - EMR Cluster in private subnet (10.100.2.0/24)
-   - MWAA (Managed Workflows for Apache Airflow) for orchestration
+   - MWAA (Managed Workflows for Apache Airflow) for orchestration deployed in the two private subnet for high availability.
    - Auto-scaling based on workload
 
 3. **Storage Layer**
@@ -77,7 +78,7 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
    - RDS for data storage (10.100.3.0/24)
 
 4. **Security Layer**
-   - VPC endpoints for secure service access
+   - Used VPC Endpoints to allow private subnet resources to securely access AWS services without a NAT Gateway.
    - IAM roles and policies
    - Security groups 
    - Certificate-based VPN authentication
@@ -167,7 +168,7 @@ terraform/
 
 3. **Storage**
    - S3 for raw and processed data
-   - RDS for metadata
+   - RDS for storage
    - Parquet format for efficiency
 
 ## Security Implementation
@@ -288,7 +289,6 @@ big-data-platform/
 1. **Terraform Deployment**
    ```bash
    terraform plan -var-file=environments/prod.tfvars
-   terraform apply -var-file=environments/prod.tfvars
    ```
 
 2. **VPN Setup**
@@ -454,6 +454,16 @@ Common issues and their solutions:
 2. Create a feature branch
 3. Submit a pull request
 4. Follow coding standards
+
+## Key Takeaways
+- Use Active Directory or SAML for authentication for Client VPN in production
+- Modular Terraform code structure significantly improves infrastructure maintainability and scalability.
+- Use spot instances with auto-termination for EMR to cut costs by up to 70% without sacrificing performance.
+- Separate orchestration (MWAA) from processing (EMR) to improve fault tolerance and modularity.
+- Enable S3 object versioning and lifecycle rules to manage storage costs and data retention.
+- Set up metric alarms on EMR and RDS for proactive monitoring and resource optimization.
+- CI/CD gating with linters and integration tests prevents poor-quality code from reaching production.
+
 
 ## Resources and Documentations
 
