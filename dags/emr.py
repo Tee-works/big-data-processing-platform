@@ -14,6 +14,7 @@ DEFAULT_ARGS = {
     "email": ["chideraozigbo@gmail.com"],
     "email_on_failure": True,
     "email_on_retry": False,
+    "email_on_success": True,
     "retries": 1,
     "retry_delay": timedelta(seconds=5),
 }

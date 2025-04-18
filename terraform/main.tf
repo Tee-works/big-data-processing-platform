@@ -64,7 +64,7 @@ module "vpc_private_a_subnet" {
   availability_zone       = "${var.aws_region}a"
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-a"
-  route_table_id          = module.vpc.private_route_table_id
+  route_table_id          = aws_route_table.private_a.id
   tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-private-a"
     }
@@ -80,11 +80,26 @@ module "vpc_private_b_subnet" {
   availability_zone       = "${var.aws_region}b"
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-b"
-  route_table_id          = module.vpc.private_route_table_id
+  route_table_id          = aws_route_table.private_b.id
   tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-private-b"
     }
   )
+}
+resource "aws_route_table" "private_a" {
+  vpc_id = module.vpc.vpc_id
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-private-a-rt"
+  })
+}
+
+resource "aws_route_table" "private_b" {
+  vpc_id = module.vpc.vpc_id
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-private-b-rt"
+  })
 }
 # importing generated server certificate 
 resource "aws_acm_certificate" "server_certificate" {
@@ -187,69 +202,69 @@ module "vpn_target_subnet_sg" {
 }
 
 # elastic ip
-# resource "aws_eip" "nat_eip_a" {
-#   domain = "vpc"
+resource "aws_eip" "nat_eip_a" {
+  domain = "vpc"
 
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-nat-eip-a"
-#     }
-#   )
-# }
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-nat-eip-a"
+    }
+  )
+}
 
-# resource "aws_eip" "nat_eip_b" {
-#   domain = "vpc"
+resource "aws_eip" "nat_eip_b" {
+  domain = "vpc"
 
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-nat-eip-b"
-#     }
-#   )
-# }
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-nat-eip-b"
+    }
+  )
+}
 
-# resource "aws_nat_gateway" "private_nat_gateway_a" {
-#   allocation_id = aws_eip.nat_eip_a.id
-#   subnet_id     = module.vpn_target_subnet.subnet_id
+resource "aws_nat_gateway" "private_nat_gateway_a" {
+  allocation_id = aws_eip.nat_eip_a.id
+  subnet_id     = module.vpn_target_subnet.subnet_id
 
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-nat-gateway-a"
-#     }
-#   )
-
-
-# }
-
-# resource "aws_nat_gateway" "private_nat_gateway_b" {
-#   allocation_id = aws_eip.nat_eip_b.id
-#   subnet_id     = module.vpc_public_b_subnet.subnet_id
-
-#   tags = merge(local.tags, {
-#     Name = "${var.project_name}-nat-gateway-b"
-#     }
-#   )
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-nat-gateway-a"
+    }
+  )
 
 
-# }
+}
 
-# resource "aws_route" "private_a_to_nat" {
-#   route_table_id         = module.vpc.private_route_table_id
-#   destination_cidr_block = "0.0.0.0/0"
-#   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_a.id
-# }
+resource "aws_nat_gateway" "private_nat_gateway_b" {
+  allocation_id = aws_eip.nat_eip_b.id
+  subnet_id     = module.vpc_public_b_subnet.subnet_id
 
-# resource "aws_route" "private_b_to_nat" {
-#   route_table_id         = module.vpc.public_route_table_id
-#   destination_cidr_block = "0.0.0.0/0"
-#   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_b.id
-# }
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-nat-gateway-b"
+    }
+  )
 
-# resource "aws_route_table_association" "private_a_assoc" {
-#   subnet_id      = module.vpc_private_a_subnet.subnet_id
-#   route_table_id = module.vpc.private_route_table_id
-# }
 
-# resource "aws_route_table_association" "private_b_assoc" {
-#   subnet_id      = module.vpc_private_b_subnet.subnet_id
-#   route_table_id = module.vpc.private_route_table_id
-# }
+}
+
+resource "aws_route" "private_a_to_nat" {
+  route_table_id         = aws_route_table.private_a.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.private_nat_gateway_a.id
+}
+
+resource "aws_route" "private_b_to_nat" {
+  route_table_id         = aws_route_table.private_b.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.private_nat_gateway_b.id
+}
+
+resource "aws_route_table_association" "private_a_assoc" {
+  subnet_id      = module.vpc_private_a_subnet.subnet_id
+  route_table_id = aws_route_table.private_a.id
+}
+
+resource "aws_route_table_association" "private_b_assoc" {
+  subnet_id      = module.vpc_private_b_subnet.subnet_id
+  route_table_id = aws_route_table.private_b.id
+}
 
 
 
@@ -329,7 +344,8 @@ resource "aws_vpc_endpoint" "s3" {
   service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids = [
-    module.vpc.private_route_table_id
+    aws_route_table.private_a.id,
+    aws_route_table.private_b.id,
   ]
   tags = merge(local.tags, {
     Name = "${var.project_name}-s3-gateway-endpoint"
@@ -718,23 +734,23 @@ resource "aws_mwaa_environment" "big_data" {
   logging_configuration {
     dag_processing_logs {
       enabled   = true
-      log_level = "DEBUG"
+      log_level = "INFO"
     }
     scheduler_logs {
       enabled   = true
-      log_level = "DEBUG"
+      log_level = "INFO"
     }
     task_logs {
       enabled   = true
-      log_level = "DEBUG"
+      log_level = "INFO"
     }
     webserver_logs {
       enabled   = true
-      log_level = "DEBUG"
+      log_level = "INFO"
     }
     worker_logs {
       enabled   = true
-      log_level = "DEBUG"
+      log_level = "INFO"
     }
   }
 
