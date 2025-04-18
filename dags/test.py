@@ -4,7 +4,6 @@ from airflow import DAG
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.operators.python import PythonOperator
 
-
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,

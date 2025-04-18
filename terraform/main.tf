@@ -660,7 +660,7 @@ resource "aws_iam_policy" "mwaa_policy" {
 
   policy = templatefile("./policies/mwaa-policy.json", {
     s3_arn       = module.s3_bucket.bucket_arn
-    secret_arn   = aws_secretsmanager_secret.security_manager.arn
+    #secret_arn   = aws_secretsmanager_secret.security_manager.arn
     emr_role_arn = aws_iam_role.emr_service_role.arn,
     emr_ec2_arn  = aws_iam_role.emr_ec2_role.arn
     project_name = "${var.project_name}-mwaa"
@@ -730,13 +730,13 @@ resource "aws_mwaa_environment" "big_data" {
     "email.default_email_on_retry"   = "True"
     "email.default_email_on_failure" = "True"
     "email.default_email_on_success" = "True"
-    "smtp.smtp_host"                 = "mail.dataengineeringcommunity.com"
+    "smtp.smtp_host"                 = var.mail_server
     "smtp.smtp_starttls"             = "True"
-    "smtp.smtp_ssl"                  = "False"
-    "smtp.smtp_port"                 = "587"
-    "smtp.smtp_mail_from"            = "no-reply@dataengineeringcommunity.com"
-    "smtp.smtp_user"                 = "${var.mail_username}"
-    "smtp.smtp_password"             = "${var.mail_password}"
+    "smtp.smtp_ssl"                  = var.mail_use_tls
+    "smtp.smtp_port"                 = var.mail_port
+    "smtp.smtp_mail_from"            = var.mail_username
+    "smtp.smtp_user"                 = var.mail_username
+    "smtp.smtp_password"             = var.mail_password
   }
 
 

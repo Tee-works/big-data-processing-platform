@@ -62,12 +62,12 @@
       ]
     },
     {
-      "Effect" : "Allow",
-      "Action" : [
+      "Effect": "Allow",
+      "Action": [
         "ses:SendEmail",
         "ses:SendRawEmail"
       ],
-      "Resource" : "*"
+      "Resource": "*"
     },
     {
       "Effect": "Allow",
@@ -103,7 +103,7 @@
         "secretsmanager:DescribeSecret"
       ],
       "Resource": [
-        "${secret_arn}"
+        "*"
       ]
     },
     {
