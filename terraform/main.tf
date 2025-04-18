@@ -366,12 +366,11 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 }
 
 resource "aws_vpc_endpoint" "sqs" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.sqs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
-  security_group_ids = [module.vpc_private_sg.security_group_id]
-
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  security_group_ids  = [module.vpc_private_sg.security_group_id]
   private_dns_enabled = true
 
   tags = merge(local.tags, {
@@ -380,10 +379,10 @@ resource "aws_vpc_endpoint" "sqs" {
 }
 
 resource "aws_vpc_endpoint" "emr" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.elasticmapreduce"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  vpc_id             = module.vpc.vpc_id
+  service_name       = "com.amazonaws.${var.aws_region}.elasticmapreduce"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   security_group_ids = [module.vpc_private_sg.security_group_id]
 
   private_dns_enabled = true
