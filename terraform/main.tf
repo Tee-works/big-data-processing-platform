@@ -690,18 +690,10 @@ resource "aws_vpc_security_group_ingress_rule" "vpc_ingress" {
 
 resource "aws_vpc_security_group_egress_rule" "mwaa_egress" {
   security_group_id = aws_security_group.mwaa.id
-  cidr_ipv4         = "0.0.0.0/0"
-  ip_protocol       = "-1"
-  description       = "Allow all outbound traffic"
-}
 
-resource "aws_vpc_security_group_egress_rule" "mwaa_emr_egress" {
-  security_group_id = aws_security_group.mwaa.id
-  cidr_ipv4         = "0.0.0.0/0"
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-  description       = "Allow HTTPS outbound to EMR"
+  cidr_ipv4   = "0.0.0.0/0"
+  ip_protocol = "-1"
+  description = "Allow all traffic to the internet"
 }
 
 
