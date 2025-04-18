@@ -57,7 +57,8 @@
         "logs:GetLogRecord",
         "logs:DescribeLogGroups",
         "logs:GetLogGroupFields",
-        "logs:GetQueryResults"
+        "logs:GetQueryResults",
+        "logs:DescribeLogStreams"
       ],
       "Resource": "*"
     },
@@ -101,5 +102,6 @@
       ],
       "Resource": "*"
     }
+
   ]
 }

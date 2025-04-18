@@ -169,7 +169,7 @@ module "vpn_target_subnet_sg" {
       cidr_ipv4   = "10.0.0.0/16"
       from_port   = 443
       to_port     = 443
-      ip_protocol = "tcp"
+      ip_protocol = "-1"
       description = "Allow HTTPS from VPN client"
     },
   }
@@ -299,6 +299,19 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   )
 }
 
+resource "aws_vpc_endpoint" "sqs" {
+  vpc_id              = module.vpc.vpc_id
+  service_name        = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type   = "Interface"
+  subnet_ids          = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  security_group_ids  = [module.vpc_private_sg.security_group_id]
+  private_dns_enabled = true
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-sqs-interface-endpoint"
+    }
+  )
+}
 
 # IAM 
 resource "aws_iam_group" "group" {
@@ -554,6 +567,8 @@ resource "aws_iam_policy" "mwaa_policy" {
     secret_arn   = aws_secretsmanager_secret.security_manager.arn
     emr_role_arn = aws_iam_role.emr_service_role.arn,
     emr_ec2_arn  = aws_iam_role.emr_ec2_role.arn
+    project_name = var.project_name
+    region       = var.aws_region
 
   })
 }
