@@ -470,35 +470,35 @@ resource "aws_iam_policy" "combined_policy" {
   })
 }
 
-# # Attach the policy to the group
+# Attach the policy to the group
 resource "aws_iam_group_policy_attachment" "policy_attachment" {
   group      = aws_iam_group.group.name
   policy_arn = aws_iam_policy.combined_policy.arn
 
 }
 
-# # Secret Managers
-resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager10"
+# Secret Managers
+# resource "aws_secretsmanager_secret" "security_manager" {
+#   name = "${var.project_name}-security-manager10"
 
-  tags                           = local.tags
-  description                    = "Secret manager for ${var.project_name} project"
-  force_overwrite_replica_secret = true
+#   tags                           = local.tags
+#   description                    = "Secret manager for ${var.project_name} project"
+#   force_overwrite_replica_secret = true
 
 
-}
+# }
 
 # # Secret Manager version
-resource "aws_secretsmanager_secret_version" "secret_version" {
-  secret_id = aws_secretsmanager_secret.security_manager.id
-  secret_string = jsonencode({
-    "MAIL_SERVER"   = var.mail_server,
-    "MAIL_PORT"     = var.mail_port,
-    "MAIL_USERNAME" = var.mail_username,
-    "MAIL_PASSWORD" = var.mail_password,
-    "MAIL_USE_TLS"  = var.mail_use_tls,
-  })
-}
+# resource "aws_secretsmanager_secret_version" "secret_version" {
+#   secret_id = aws_secretsmanager_secret.security_manager.id
+#   secret_string = jsonencode({
+#     "MAIL_SERVER"   = var.mail_server,
+#     "MAIL_PORT"     = var.mail_port,
+#     "MAIL_USERNAME" = var.mail_username,
+#     "MAIL_PASSWORD" = var.mail_password,
+#     "MAIL_USE_TLS"  = var.mail_use_tls,
+#   })
+# }
 
 # CloudWatch Logs
 resource "aws_cloudwatch_log_group" "logs" {
@@ -730,7 +730,15 @@ resource "aws_mwaa_environment" "big_data" {
     "email.default_email_on_retry"   = "True"
     "email.default_email_on_failure" = "True"
     "email.default_email_on_success" = "True"
+    "smtp.smtp_host"                 = "mail.dataengineeringcommunity.com"
+    "smtp.smtp_starttls"             = "True"
+    "smtp.smtp_ssl"                  = "False"
+    "smtp.smtp_port"                 = "587"
+    "smtp.smtp_mail_from"            = "no-reply@dataengineeringcommunity.com"
+    "smtp.smtp_user"                 = "${var.mail_username}"
+    "smtp.smtp_password"             = "${var.mail_password}"
   }
+
 
   logging_configuration {
     dag_processing_logs {
@@ -779,29 +787,29 @@ resource "aws_s3_object" "mwaa_dags_folder" {
 }
 
 # S3 bucket object for the startup script
-resource "aws_s3_object" "mwaa_startup_script" {
-  bucket = var.aws_bucket_name
-  key    = "scripts/mwaa_startup.sh"
+# resource "aws_s3_object" "mwaa_startup_script" {
+#   bucket = var.aws_bucket_name
+#   key    = "scripts/mwaa_startup.sh"
 
-  content = <<EOF
-#!/bin/bash
+#   content = <<EOF
+# #!/bin/bash
 
-SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
+# SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
 
-MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
-MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
-MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
-MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
-MAIL_USE_TLS=$(echo $SMTP_SECRET | jq -r '.MAIL_USE_TLS')
 
-airflow connections add 'smtp_default' \
-  --conn-type 'smtp' \
-  --conn-host "$MAIL_SERVER" \
-  --conn-login "$MAIL_USERNAME" \
-  --conn-password "$MAIL_PASSWORD" \
-  --conn-port "$MAIL_PORT" \
-  --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
-EOF
-}
+# MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
+# MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
+
+
+# airflow connections add 'smtp_default' \
+#   --conn-type 'smtp' \
+#   --conn-host "$MAIL_SERVER" \
+#   --conn-login "$MAIL_USERNAME" \
+#   --conn-password "$MAIL_PASSWORD" \
+#   --conn-port "$MAIL_PORT" \
+#   --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
+# EOF
+# }
+
 
 

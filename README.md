@@ -67,21 +67,58 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
 
 2. **Processing Layer**
    - EMR Cluster in private subnet (10.100.2.0/24)
-   - MWAA (Managed Workflows for Apache Airflow) for orchestration deployed in the two private subnet for high availability.
+   - MWAA (Managed Workflows for Apache Airflow) for orchestration deployed in the two private subnets for high availability
    - Auto-scaling based on workload
+   - NAT Gateways in each private subnet for limited internet access (primarily for Airflow email notifications)
+   - Elastic Network Interface (ENI) for secure communication between MWAA and EMR clusters
 
 3. **Storage Layer**
    - S3 Data Lake with organized structure:
      - `etl/` - For ETL scripts and configurations
      - `dags/` - For Airflow DAG definitions
      - `logs/` - For application and system logs
-   - RDS for data storage (10.100.3.0/24)
 
 4. **Security Layer**
-   - Used VPC Endpoints to allow private subnet resources to securely access AWS services without a NAT Gateway.
+   - Used VPC Endpoints to allow private subnet resources to securely access AWS services
+   - NAT Gateways for limited internet access
    - IAM roles and policies
    - Security groups 
    - Certificate-based VPN authentication
+
+5. **VPC Endpoints**
+   - **S3 Gateway Endpoint**
+     - Enables private connectivity to S3 without internet access
+     - Reduces data transfer costs
+     - Improves security by keeping traffic within AWS network
+   
+   - **CloudWatch Logs Interface Endpoint**
+     - Secure logging without internet access
+     - Enables private subnet resources to send logs to CloudWatch
+     - Maintains security boundaries while enabling monitoring
+   
+   - **Secrets Manager Interface Endpoint**
+     - Secure access to secrets without internet exposure
+     - Enables private subnet resources to retrieve credentials securely
+     - Reduces attack surface by eliminating internet access for secrets
+   
+   - **SQS Interface Endpoint**
+     - Enables private communication between services
+     - Supports message queuing without internet access
+     - Maintains security for inter-service communication
+   
+   - **EMR Interface Endpoint**
+     - Despite EMR being in the VPC, the interface endpoint is crucial for:
+       - Secure communication with EMR control plane
+       - Private access to EMR API operations
+       - Enables cluster management without internet access
+       - Supports secure job submission and monitoring
+       - Reduces exposure of management operations to the internet
+     - Benefits:
+       - Enhanced security for cluster management operations
+       - Reduced attack surface for EMR control plane
+       - Improved reliability by keeping management traffic within AWS network
+       - Better compliance with security requirements
+       - Cost optimization by reducing NAT Gateway usage for management operations
 
 ### Why These Services?
 
@@ -137,10 +174,21 @@ terraform/
 2. **Subnets**
    - VPN Target Subnet: 10.100.0.0/24 (Public)
    - Application Subnet: 10.100.1.0/24 (Public)
-   - EMR Subnet: 10.100.2.0/24 (Private)
-   - RDS Subnet: 10.100.3.0/24 (Private)
+   - Private Subnet A: 10.100.3.0/24 (Private)
+   - Private Subnet B: 10.100.4.0/24 (Private)
 
-3. **Security Groups**
+3. **NAT Gateways**
+   - One NAT Gateway per private subnet for limited internet access
+   - Primarily used for Airflow email notifications
+   - Located in public subnets for high availability
+
+4. **Elastic Network Interface (ENI)**
+   - Used for secure communication between MWAA and EMR clusters
+   - Enables private network connectivity between services
+   - Provides additional security through VPC isolation
+   - Allows for better network traffic control and monitoring
+
+5. **Security Groups**
    ```hcl
    module "vpc_private_sg" {
      vpc_id              = module.vpc.vpc_id
@@ -178,6 +226,12 @@ terraform/
    - Private subnets for processing
    - Security groups 
    - VPN access
+   - Elastic Network Interface (ENI) for secure inter-service communication
+   - VPC Endpoints for secure AWS service access
+     - Gateway endpoints for S3
+     - Interface endpoints for CloudWatch, Secrets Manager, SQS, and EMR
+     - Private connectivity to AWS services
+     - Reduced attack surface
 
 2. **Access Control**
    - IAM roles and policies
@@ -209,13 +263,14 @@ terraform/
 
 2. **Storage**
    - Amazon S3
-   - Amazon RDS
 
 3. **Networking**
    - Amazon VPC
    - Client VPN
    - Internet Gateway
+   - NAT Gateway
    - Gateway Endpoints
+   - Elastic Network Interface (ENI)
 
 4. **Security**
    - AWS Certificate Manager
@@ -254,8 +309,7 @@ big-data-platform/
 │   ├── policies/           # IAM Policies components
 ├── images/
 ├── dags/
-├── etl/
-├── tests/                # Integration tests
+├── etl/               # Integration tests
 ├── .gitignore                 # git ignore file
 └── README.md            # Project Documentation
 ```
@@ -473,5 +527,8 @@ Common issues and their solutions:
 - [Orchestrating analytics jobs on Amazon EMR Notebooks using Amazon MWAA](https://aws.amazon.com/blogs/big-data/orchestrating-analytics-jobs-on-amazon-emr-notebooks-using-amazon-mwaa/)
 - [Building and operating data pipelines at scale using CI/CD, Amazon MWAA and Apache Spark on Amazon EMR by Wipro](https://aws.amazon.com/blogs/big-data/building-and-operating-data-pipelines-at-scale-using-ci-cd-amazon-mwaa-and-apache-spark-on-amazon-emr-by-wipro/)
 - [Terraform Documentation for AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [How do I use Amazon SES as the SMTP host to send emails from Amazon MWAA DAG tasks?](https://repost.aws/knowledge-center/mwaa-ses-send-emails)
+- [Create an AWS Secrets Manager secret](https://docs.aws.amazon.com/secretsmanager/latest/userguide/create_secret.html)
+- [Set up email sending with Amazon SES](https://docs.aws.amazon.com/ses/latest/dg/send-email.html)
 ---
 For more information, contact the repo owner.
