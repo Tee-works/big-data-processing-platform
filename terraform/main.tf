@@ -17,7 +17,7 @@ module "vpc" {
   create_igw           = true
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags                 = merge(local.tags, {
+  tags = merge(local.tags, {
     Name = "${var.project_name}-vpc"
     }
   )
@@ -33,7 +33,7 @@ module "vpn_target_subnet" {
   map_public_ip_on_launch = true
   subnet_name             = "${module.vpc.vpc_name}-public-a"
   route_table_id          = module.vpc.public_route_table_id
-  tags                    = merge(local.tags, {
+  tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-public-a"
     }
   )
@@ -49,7 +49,7 @@ module "vpc_public_b_subnet" {
   map_public_ip_on_launch = true
   subnet_name             = "${module.vpc.vpc_name}-public-b"
   route_table_id          = module.vpc.public_route_table_id
-  tags                    = merge(local.tags, {
+  tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-public-b"
     }
   )
@@ -65,7 +65,7 @@ module "vpc_private_a_subnet" {
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-a"
   route_table_id          = module.vpc.private_route_table_id
-  tags                    = merge(local.tags, {
+  tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-private-a"
     }
   )
@@ -81,7 +81,7 @@ module "vpc_private_b_subnet" {
   map_public_ip_on_launch = false
   subnet_name             = "${module.vpc.vpc_name}-private-b"
   route_table_id          = module.vpc.private_route_table_id
-  tags                    = merge(local.tags, {
+  tags = merge(local.tags, {
     Name = "${module.vpc.vpc_name}-private-b"
     }
   )
@@ -352,10 +352,10 @@ resource "aws_iam_policy" "combined_policy" {
 
 
   policy = templatefile("./policies/policy.json", {
-    s3_bucket_arn  = module.s3_bucket.bucket_arn
-    s3_object_arns = ["${module.s3_bucket.bucket_arn}/*"]
+    s3_bucket_arn            = module.s3_bucket.bucket_arn
+    s3_object_arns           = ["${module.s3_bucket.bucket_arn}/*"]
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.logs.arn
-    mwaa_arn = aws_mwaa_environment.big_data.arn
+    mwaa_arn                 = aws_mwaa_environment.big_data.arn
 
 
   })
@@ -370,7 +370,7 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager7"
+  name = "${var.project_name}-security-manager8"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"

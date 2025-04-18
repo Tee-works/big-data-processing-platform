@@ -42,7 +42,7 @@ JOB_FLOW_OVERRIDES = {
         "KeepJobFlowAliveWhenNoSteps": True,
         "TerminationProtected": False,
         "Ec2KeyName": "cyberdom-key",
-        "Ec2SubnetId": "subnet-0dbe896802db6824b",
+        "Ec2SubnetId": "subnet-048650d4b8cf608e4",
         # "EmrManagedMasterSecurityGroup": "sg-0e58528ec849d645d",
         # "EmrManagedSlaveSecurityGroup": "sg-0e58528ec849d645d",
     },

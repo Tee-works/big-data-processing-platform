@@ -472,6 +472,6 @@ Common issues and their solutions:
 - [AWS Documenation on Amazon Managed Workflows for Apache Airflow](https://docs.aws.amazon.com/mwaa/latest/userguide/what-is-mwaa.html)
 - [Orchestrating analytics jobs on Amazon EMR Notebooks using Amazon MWAA](https://aws.amazon.com/blogs/big-data/orchestrating-analytics-jobs-on-amazon-emr-notebooks-using-amazon-mwaa/)
 - [Building and operating data pipelines at scale using CI/CD, Amazon MWAA and Apache Spark on Amazon EMR by Wipro](https://aws.amazon.com/blogs/big-data/building-and-operating-data-pipelines-at-scale-using-ci-cd-amazon-mwaa-and-apache-spark-on-amazon-emr-by-wipro/)
-- [Terraform Documentatio for AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
+- [Terraform Documentation for AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
 ---
 For more information, contact the repo owner.
