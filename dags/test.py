@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.operators.python import PythonOperator
+from airflow.utils.email import send_email
 
 default_args = {
     "owner": "airflow",
@@ -10,11 +11,10 @@ default_args = {
     "email_on_failure": True,
     "email_on_retry": False,
     "email_on_success": True,
-    'email': ['chideraozigbo@gmail.com'],
+    "email": ["chideraozigbo@gmail.com"],
     "retries": 1,
     "retry_delay": timedelta(seconds=3),
 }
-
 
 dag = DAG(
     "simple_addition_dag",
@@ -32,10 +32,20 @@ def perform_addition(a, b, **kwargs):
     return result
 
 
-start = DummyOperator(
-    task_id="start",
-    dag=dag,
-)
+def send_custom_email_fn(**kwargs):
+    subject = "🟢 DAG Success: simple_addition_dag"
+    html_content = """
+    <h3>The DAG has run successfully!</h3>
+    <p>Everything worked as expected 🎉</p>
+    """
+    send_email(
+        to=["chideraozigbo@gmail.com"],
+        subject=subject,
+        html_content=html_content,
+    )
+
+
+start = DummyOperator(task_id="start", dag=dag)
 
 addition_task = PythonOperator(
     task_id="addition_task",
@@ -44,10 +54,13 @@ addition_task = PythonOperator(
     dag=dag,
 )
 
-end = DummyOperator(
-    task_id="end",
+send_custom_email = PythonOperator(
+    task_id="send_custom_email",
+    python_callable=send_custom_email_fn,
+    provide_context=True,
     dag=dag,
 )
 
+end = DummyOperator(task_id="end", dag=dag)
 
-start >> addition_task >> end
+start >> addition_task >> send_custom_email >> end

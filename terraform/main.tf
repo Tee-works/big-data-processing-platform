@@ -729,6 +729,7 @@ resource "aws_mwaa_environment" "big_data" {
     "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
     "email.default_email_on_retry"   = "True"
     "email.default_email_on_failure" = "True"
+    "email.default_email_on_success" = "True"
   }
 
   logging_configuration {
