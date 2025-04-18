@@ -169,9 +169,9 @@ module "vpn_target_subnet_sg" {
       cidr_ipv4   = "10.0.0.0/16"
       from_port   = 443
       to_port     = 443
-      ip_protocol = "-1"
+      ip_protocol = "tcp"
       description = "Allow HTTPS from VPN client"
-    },
+    }
   }
   egress_rules = {
     all = {
@@ -185,6 +185,72 @@ module "vpn_target_subnet_sg" {
     }
   )
 }
+
+# elastic ip
+# resource "aws_eip" "nat_eip_a" {
+#   domain = "vpc"
+
+#   tags = merge(local.tags, {
+#     Name = "${var.project_name}-nat-eip-a"
+#     }
+#   )
+# }
+
+# resource "aws_eip" "nat_eip_b" {
+#   domain = "vpc"
+
+#   tags = merge(local.tags, {
+#     Name = "${var.project_name}-nat-eip-b"
+#     }
+#   )
+# }
+
+# resource "aws_nat_gateway" "private_nat_gateway_a" {
+#   allocation_id = aws_eip.nat_eip_a.id
+#   subnet_id     = module.vpn_target_subnet.subnet_id
+
+#   tags = merge(local.tags, {
+#     Name = "${var.project_name}-nat-gateway-a"
+#     }
+#   )
+
+
+# }
+
+# resource "aws_nat_gateway" "private_nat_gateway_b" {
+#   allocation_id = aws_eip.nat_eip_b.id
+#   subnet_id     = module.vpc_public_b_subnet.subnet_id
+
+#   tags = merge(local.tags, {
+#     Name = "${var.project_name}-nat-gateway-b"
+#     }
+#   )
+
+
+# }
+
+# resource "aws_route" "private_a_to_nat" {
+#   route_table_id         = module.vpc.private_route_table_id
+#   destination_cidr_block = "0.0.0.0/0"
+#   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_a.id
+# }
+
+# resource "aws_route" "private_b_to_nat" {
+#   route_table_id         = module.vpc.public_route_table_id
+#   destination_cidr_block = "0.0.0.0/0"
+#   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_b.id
+# }
+
+# resource "aws_route_table_association" "private_a_assoc" {
+#   subnet_id      = module.vpc_private_a_subnet.subnet_id
+#   route_table_id = module.vpc.private_route_table_id
+# }
+
+# resource "aws_route_table_association" "private_b_assoc" {
+#   subnet_id      = module.vpc_private_b_subnet.subnet_id
+#   route_table_id = module.vpc.private_route_table_id
+# }
+
 
 
 # Security Groups for public and private subnets
@@ -300,17 +366,31 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 }
 
 resource "aws_vpc_endpoint" "sqs" {
-  vpc_id              = module.vpc.vpc_id
-  service_name        = "com.amazonaws.${var.aws_region}.sqs"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
-  security_group_ids  = [module.vpc_private_sg.security_group_id]
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  security_group_ids = [module.vpc_private_sg.security_group_id]
+
   private_dns_enabled = true
 
   tags = merge(local.tags, {
-    Name = "${var.project_name}-sqs-interface-endpoint"
-    }
-  )
+    Name = "${var.project_name}-sqs-endpoint"
+  })
+}
+
+resource "aws_vpc_endpoint" "emr" {
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.elasticmapreduce"
+  vpc_endpoint_type = "Interface"
+  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  security_group_ids = [module.vpc_private_sg.security_group_id]
+
+  private_dns_enabled = true
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-emr-endpoint"
+  })
 }
 
 # IAM 
@@ -369,6 +449,7 @@ resource "aws_iam_policy" "combined_policy" {
     s3_object_arns           = ["${module.s3_bucket.bucket_arn}/*"]
     cloudwatch_log_group_arn = aws_cloudwatch_log_group.logs.arn
     mwaa_arn                 = aws_mwaa_environment.big_data.arn
+    mwa_region               = var.aws_region
 
 
   })
@@ -383,7 +464,7 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager8"
+  name = "${var.project_name}-security-manager10"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
@@ -417,7 +498,7 @@ resource "aws_cloudwatch_log_group" "logs" {
 
 # CloudWatch Log Stream
 resource "aws_cloudwatch_log_stream" "log_stream" {
-  name           = "Client_VPN-stream"
+  name           = "Client_VPN_stream"
   log_group_name = aws_cloudwatch_log_group.logs.name
 }
 
@@ -567,8 +648,9 @@ resource "aws_iam_policy" "mwaa_policy" {
     secret_arn   = aws_secretsmanager_secret.security_manager.arn
     emr_role_arn = aws_iam_role.emr_service_role.arn,
     emr_ec2_arn  = aws_iam_role.emr_ec2_role.arn
-    project_name = var.project_name
-    region       = var.aws_region
+    project_name = "${var.project_name}-mwaa"
+    mwa_region   = var.aws_region
+    account_id   = data.aws_caller_identity.current.account_id
 
   })
 }
@@ -578,6 +660,51 @@ resource "aws_iam_role_policy_attachment" "mwaa_policy_attachment" {
   role       = aws_iam_role.mwaa_execution_role.name
   policy_arn = aws_iam_policy.mwaa_policy.arn
 }
+
+resource "aws_security_group" "mwaa" {
+  name        = "mwaa-self-referencing"
+  description = "MWAA security group"
+  vpc_id      = module.vpc.vpc_id
+
+  tags = merge(local.tags, {
+    Name = "${var.project_name}-mwaa-sg"
+    }
+  )
+}
+
+
+resource "aws_vpc_security_group_ingress_rule" "self_ingress" {
+  security_group_id = aws_security_group.mwaa.id
+
+  ip_protocol                  = "-1"
+  referenced_security_group_id = aws_security_group.mwaa.id
+  description                  = "Allow all traffic from the same security group"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "vpc_ingress" {
+  security_group_id = aws_security_group.mwaa.id
+
+  ip_protocol = "-1"
+  cidr_ipv4   = var.cidr_block
+  description = "Allow all traffic from the same security group"
+}
+
+resource "aws_vpc_security_group_egress_rule" "mwaa_egress" {
+  security_group_id = aws_security_group.mwaa.id
+  cidr_ipv4         = "0.0.0.0/0"
+  ip_protocol       = "-1"
+  description       = "Allow all outbound traffic"
+}
+
+resource "aws_vpc_security_group_egress_rule" "mwaa_emr_egress" {
+  security_group_id = aws_security_group.mwaa.id
+  cidr_ipv4         = "0.0.0.0/0"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  description       = "Allow HTTPS outbound to EMR"
+}
+
 
 
 # MWAA Environment
@@ -621,7 +748,7 @@ resource "aws_mwaa_environment" "big_data" {
   }
 
   network_configuration {
-    security_group_ids = [module.vpc_private_sg.security_group_id]
+    security_group_ids = [aws_security_group.mwaa.id]
     subnet_ids = [
       module.vpc_private_a_subnet.subnet_id,
       module.vpc_private_b_subnet.subnet_id

@@ -4,22 +4,21 @@
     {
       "Effect": "Allow",
       "Action": "airflow:PublishMetrics",
-      "Resource": "*"
+      "Resource": "arn:aws:airflow:${mwa_region}:${account_id}:environment/${project_name}"
     },
     {
-      "Effect":"Allow", 
-      "Action" : [
+      "Effect": "Allow",
+      "Action": [
         "iam:PassRole"
       ],
-      "Resource" : [
+      "Resource": [
         "${emr_role_arn}",
         "${emr_ec2_arn}"
-
       ]
     },
     {
-      "Effect" : "Allow",
-      "Action" : [
+      "Effect": "Allow",
+      "Action": [
         "ec2:RunInstances",
         "ec2:TerminateInstances",
         "ec2:DescribeInstances",
@@ -30,7 +29,7 @@
         "ec2:CreateSecurityGroup",
         "ec2:AuthorizeSecurityGroupIngress"
       ],
-      "Resource" : "*"
+      "Resource": "*"
     },
     {
       "Effect": "Allow",
@@ -55,11 +54,25 @@
         "logs:PutLogEvents",
         "logs:GetLogEvents",
         "logs:GetLogRecord",
-        "logs:DescribeLogGroups",
         "logs:GetLogGroupFields",
-        "logs:GetQueryResults",
-        "logs:DescribeLogStreams"
+        "logs:GetQueryResults"
       ],
+      "Resource": [
+        "arn:aws:logs:${mwa_region}:${account_id}:log-group:airflow-${project_name}-*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "logs:DescribeLogGroups"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": "cloudwatch:PutMetricData",
       "Resource": "*"
     },
     {
@@ -100,8 +113,24 @@
         "sqs:ReceiveMessage",
         "sqs:SendMessage"
       ],
-      "Resource": "*"
+      "Resource": "arn:aws:sqs:${mwa_region}:*:airflow-celery-*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "kms:Decrypt",
+        "kms:DescribeKey",
+        "kms:GenerateDataKey*",
+        "kms:Encrypt"
+      ],
+      "NotResource": "arn:aws:kms:*:${account_id}:key/*",
+      "Condition": {
+        "StringLike": {
+          "kms:ViaService": [
+            "sqs.${mwa_region}.amazonaws.com"
+          ]
+        }
+      }
     }
-
   ]
 }
