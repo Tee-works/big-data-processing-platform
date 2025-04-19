@@ -16,9 +16,9 @@ module "vpc" {
 
   cidr_block           = var.cidr_block
   vpc_name             = var.vpc_name
-  create_igw           = true        # Create Internet Gateway for public internet access
-  enable_dns_support   = true        # Enable DNS resolution within VPC
-  enable_dns_hostnames = true        # Enable DNS hostnames for EC2 instances
+  create_igw           = true # Create Internet Gateway for public internet access
+  enable_dns_support   = true # Enable DNS resolution within VPC
+  enable_dns_hostnames = true # Enable DNS hostnames for EC2 instances
   tags = merge(local.tags, {
     Name = "${var.project_name}-vpc"
     }
@@ -33,7 +33,7 @@ module "vpn_target_subnet" {
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.0.0/24"
   availability_zone       = "${var.aws_region}a"
-  map_public_ip_on_launch = true     # Enable automatic public IP assignment
+  map_public_ip_on_launch = true # Enable automatic public IP assignment
   subnet_name             = "${module.vpc.vpc_name}-public-a"
   route_table_id          = module.vpc.public_route_table_id
   tags = merge(local.tags, {
@@ -67,7 +67,7 @@ module "vpc_private_a_subnet" {
   vpc_id                  = module.vpc.vpc_id
   cidr_block              = "10.100.3.0/24"
   availability_zone       = "${var.aws_region}a"
-  map_public_ip_on_launch = false    # No public IP assignment for private subnet
+  map_public_ip_on_launch = false # No public IP assignment for private subnet
   subnet_name             = "${module.vpc.vpc_name}-private-a"
   route_table_id          = aws_route_table.private_a.id
   tags = merge(local.tags, {
@@ -144,8 +144,8 @@ resource "aws_acm_certificate" "client_certificate" {
 resource "aws_ec2_client_vpn_endpoint" "client_vpn" {
   description            = "BuildItAll client VPN"
   server_certificate_arn = aws_acm_certificate.server_certificate.arn
-  client_cidr_block      = "10.0.0.0/16"    # IP range for VPN clients
-  split_tunnel           = true             # Only route VPC traffic through VPN
+  client_cidr_block      = "10.0.0.0/16" # IP range for VPN clients
+  split_tunnel           = true          # Only route VPC traffic through VPN
   vpc_id                 = module.vpc.vpc_id
   security_group_ids     = [module.vpn_target_subnet_sg.security_group_id]
   client_login_banner_options {
@@ -197,7 +197,7 @@ module "vpn_target_subnet_sg" {
 
   ingress_rules = {
     https = {
-      cidr_ipv4   = "10.0.0.0/16"    # Allow HTTPS from VPN clients
+      cidr_ipv4   = "10.0.0.0/16" # Allow HTTPS from VPN clients
       from_port   = 443
       to_port     = 443
       ip_protocol = "tcp"
@@ -206,7 +206,7 @@ module "vpn_target_subnet_sg" {
   }
   egress_rules = {
     all = {
-      cidr_ipv4   = "0.0.0.0/0"      # Allow all outbound traffic
+      cidr_ipv4   = "0.0.0.0/0" # Allow all outbound traffic
       ip_protocol = "-1"
     }
   }
@@ -267,7 +267,7 @@ resource "aws_nat_gateway" "private_nat_gateway_b" {
 # This routes all outbound traffic from private subnet A through NAT Gateway A
 resource "aws_route" "private_a_to_nat" {
   route_table_id         = aws_route_table.private_a.id
-  destination_cidr_block = "0.0.0.0/0"    # Route all outbound traffic
+  destination_cidr_block = "0.0.0.0/0" # Route all outbound traffic
   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_a.id
 }
 
@@ -275,7 +275,7 @@ resource "aws_route" "private_a_to_nat" {
 # This routes all outbound traffic from private subnet B through NAT Gateway B
 resource "aws_route" "private_b_to_nat" {
   route_table_id         = aws_route_table.private_b.id
-  destination_cidr_block = "0.0.0.0/0"    # Route all outbound traffic
+  destination_cidr_block = "0.0.0.0/0" # Route all outbound traffic
   nat_gateway_id         = aws_nat_gateway.private_nat_gateway_b.id
 }
 
@@ -330,7 +330,7 @@ module "vpc_public_sg" {
 
   egress_rules = {
     all = {
-      cidr_ipv4   = "0.0.0.0/0"    # Allow all outbound traffic
+      cidr_ipv4   = "0.0.0.0/0" # Allow all outbound traffic
       ip_protocol = "-1"
     }
   }
@@ -360,7 +360,7 @@ module "vpc_private_sg" {
 
   egress_rules = {
     all = {
-      cidr_ipv4   = "0.0.0.0/0"    # Allow all outbound traffic
+      cidr_ipv4   = "0.0.0.0/0" # Allow all outbound traffic
       ip_protocol = "-1"
     }
   }
@@ -374,8 +374,8 @@ module "vpc_private_sg" {
 # Create S3 Gateway Endpoint
 # This enables private connectivity to S3 without internet access
 resource "aws_vpc_endpoint" "s3" {
-  vpc_id       = module.vpc.vpc_id
-  service_name = "com.amazonaws.${var.aws_region}.s3"
+  vpc_id            = module.vpc.vpc_id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
   vpc_endpoint_type = "Gateway"
   route_table_ids = [
     aws_route_table.private_a.id,
@@ -390,10 +390,10 @@ resource "aws_vpc_endpoint" "s3" {
 # Create CloudWatch Logs Interface Endpoint
 # This enables private subnet resources to send logs to CloudWatch
 resource "aws_vpc_endpoint" "logs" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.logs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  vpc_id             = module.vpc.vpc_id
+  service_name       = "com.amazonaws.${var.aws_region}.logs"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   security_group_ids = [module.vpc_private_sg.security_group_id]
 
   tags = merge(local.tags, {
@@ -405,10 +405,10 @@ resource "aws_vpc_endpoint" "logs" {
 # Create Secrets Manager Interface Endpoint
 # This enables secure access to secrets without internet exposure
 resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.secretsmanager"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  vpc_id             = module.vpc.vpc_id
+  service_name       = "com.amazonaws.${var.aws_region}.secretsmanager"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   security_group_ids = [module.vpc_private_sg.security_group_id]
 
   tags = merge(local.tags, {
@@ -420,10 +420,10 @@ resource "aws_vpc_endpoint" "secretsmanager" {
 # Create SQS Interface Endpoint
 # This enables private communication between services
 resource "aws_vpc_endpoint" "sqs" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.sqs"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  vpc_id             = module.vpc.vpc_id
+  service_name       = "com.amazonaws.${var.aws_region}.sqs"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   security_group_ids = [module.vpc_private_sg.security_group_id]
 
   tags = merge(local.tags, {
@@ -435,10 +435,10 @@ resource "aws_vpc_endpoint" "sqs" {
 # Create EMR Interface Endpoint
 # This enables secure communication with EMR control plane
 resource "aws_vpc_endpoint" "emr" {
-  vpc_id            = module.vpc.vpc_id
-  service_name      = "com.amazonaws.${var.aws_region}.elasticmapreduce"
-  vpc_endpoint_type = "Interface"
-  subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+  vpc_id             = module.vpc.vpc_id
+  service_name       = "com.amazonaws.${var.aws_region}.elasticmapreduce"
+  vpc_endpoint_type  = "Interface"
+  subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   security_group_ids = [module.vpc_private_sg.security_group_id]
 
   tags = merge(local.tags, {
@@ -713,7 +713,7 @@ resource "aws_iam_policy" "mwaa_policy" {
   description = "Policy for MWAA to access necessary services"
 
   policy = templatefile("./policies/mwaa-policy.json", {
-    s3_arn       = module.s3_bucket.bucket_arn
+    s3_arn = module.s3_bucket.bucket_arn
     #secret_arn   = aws_secretsmanager_secret.security_manager.arn
     emr_role_arn = aws_iam_role.emr_service_role.arn,
     emr_ec2_arn  = aws_iam_role.emr_ec2_role.arn
@@ -785,7 +785,7 @@ resource "aws_mwaa_environment" "big_data" {
 
   network_configuration {
     security_group_ids = [aws_security_group.mwaa.id]
-    subnet_ids        = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
+    subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   }
 
   airflow_configuration_options = {
