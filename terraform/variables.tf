@@ -49,12 +49,6 @@ variable "users" {
 }
 
 
-variable "create_access_keys" {
-  description = "Whether to create access keys for the users"
-  type        = bool
-  default     = true
-}
-
 variable "password_length" {
   description = "Length of the generated passwords for console access"
   type        = number
