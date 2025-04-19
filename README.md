@@ -69,8 +69,7 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
    - EMR Cluster in private subnet (10.100.2.0/24)
    - MWAA (Managed Workflows for Apache Airflow) for orchestration deployed in the two private subnets for high availability
    - Auto-scaling based on workload
-   - NAT Gateways in each private subnet for limited internet access (primarily for Airflow email notifications)
-   - Elastic Network Interface (ENI) for secure communication between MWAA and EMR clusters
+   - NAT Gateways with Elastic IPs for limited internet access (primarily for Airflow email notifications)
 
 3. **Storage Layer**
    - S3 Data Lake with organized structure:
@@ -177,18 +176,14 @@ terraform/
    - Private Subnet A: 10.100.3.0/24 (Private)
    - Private Subnet B: 10.100.4.0/24 (Private)
 
-3. **NAT Gateways**
+3. **NAT Gateways with Elastic IPs**
    - One NAT Gateway per private subnet for limited internet access
+   - Each NAT Gateway associated with an Elastic IP
    - Primarily used for Airflow email notifications
    - Located in public subnets for high availability
+   - Provides stable public IP addresses for outbound internet access
 
-4. **Elastic Network Interface (ENI)**
-   - Used for secure communication between MWAA and EMR clusters
-   - Enables private network connectivity between services
-   - Provides additional security through VPC isolation
-   - Allows for better network traffic control and monitoring
-
-5. **Security Groups**
+4. **Security Groups**
    ```hcl
    module "vpc_private_sg" {
      vpc_id              = module.vpc.vpc_id
@@ -268,9 +263,9 @@ terraform/
    - Amazon VPC
    - Client VPN
    - Internet Gateway
-   - NAT Gateway
+   - NAT Gateway with Elastic IPs
    - Gateway Endpoints
-   - Elastic Network Interface (ENI)
+   - Interface Endpoints
 
 4. **Security**
    - AWS Certificate Manager
