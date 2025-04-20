@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.operators.python import PythonOperator
+from notification.email import task_fail_alert
 
 default_args = {
     "owner": "airflow",
@@ -10,6 +11,7 @@ default_args = {
     "email_on_failure": True,
     "email_on_retry": False,
     "email_on_success": True,
+    'on_failure_callback': task_fail_alert,
     "email": ["chideraozigbo@gmail.com"],
     "retries": 1,
     "retry_delay": timedelta(seconds=3),
