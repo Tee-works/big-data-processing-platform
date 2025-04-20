@@ -790,14 +790,6 @@ resource "aws_mwaa_environment" "big_data" {
     subnet_ids         = [module.vpc_private_a_subnet.subnet_id, module.vpc_private_b_subnet.subnet_id]
   }
 
-  airflow_configuration_options = {
-    "email.email_backend"            = "airflow.providers.smtp.email_backend.send_email_smtp"
-    "email.default_email_on_retry"   = "True"
-    "email.default_email_on_failure" = "True"
-    "email.default_email_on_success" = "True"
-
-  }
-
   logging_configuration {
     dag_processing_logs {
       enabled   = true
