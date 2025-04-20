@@ -371,6 +371,7 @@ module "vpc_private_sg" {
   )
 }
 
+
 # Create S3 Gateway Endpoint
 # This enables private connectivity to S3 without internet access
 resource "aws_vpc_endpoint" "s3" {
@@ -387,8 +388,8 @@ resource "aws_vpc_endpoint" "s3" {
   )
 }
 
-# Create CloudWatch Logs Interface Endpoint
-# This enables private subnet resources to send logs to CloudWatch
+# # Create CloudWatch Logs Interface Endpoint
+# # This enables private subnet resources to send logs to CloudWatch
 resource "aws_vpc_endpoint" "logs" {
   vpc_id             = module.vpc.vpc_id
   service_name       = "com.amazonaws.${var.aws_region}.logs"
@@ -402,8 +403,8 @@ resource "aws_vpc_endpoint" "logs" {
   )
 }
 
-# Create Secrets Manager Interface Endpoint
-# This enables secure access to secrets without internet exposure
+# # Create Secrets Manager Interface Endpoint
+# # This enables secure access to secrets without internet exposure
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id             = module.vpc.vpc_id
   service_name       = "com.amazonaws.${var.aws_region}.secretsmanager"
@@ -417,7 +418,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   )
 }
 
-# Create SQS Interface Endpoint
+# # Create SQS Interface Endpoint
 # This enables private communication between services
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id             = module.vpc.vpc_id
@@ -432,8 +433,8 @@ resource "aws_vpc_endpoint" "sqs" {
   )
 }
 
-# Create EMR Interface Endpoint
-# This enables secure communication with EMR control plane
+# # Create EMR Interface Endpoint
+# # This enables secure communication with EMR control plane
 resource "aws_vpc_endpoint" "emr" {
   vpc_id             = module.vpc.vpc_id
   service_name       = "com.amazonaws.${var.aws_region}.elasticmapreduce"
@@ -447,14 +448,14 @@ resource "aws_vpc_endpoint" "emr" {
   )
 }
 
-# Create IAM group for users
-# This group will be used to manage user permissions
+# # Create IAM group for users
+# # This group will be used to manage user permissions
 resource "aws_iam_group" "group" {
   name = var.group_name
 }
 
-# Create IAM users and attach them to the group
-# These users will have access to the platform
+# # Create IAM users and attach them to the group
+# # These users will have access to the platform
 resource "aws_iam_user" "users" {
   for_each = toset(var.users)
 
@@ -466,8 +467,8 @@ resource "aws_iam_user" "users" {
   )
 }
 
-# Add users to the IAM group
-# This ensures consistent permissions across users
+# # Add users to the IAM group
+# # This ensures consistent permissions across users
 resource "aws_iam_user_group_membership" "users_to_group" {
   for_each = toset(var.users)
 
@@ -475,8 +476,8 @@ resource "aws_iam_user_group_membership" "users_to_group" {
   groups = [aws_iam_group.group.name]
 }
 
-# Create login profiles for users
-# This enables console access with secure password policies
+# # Create login profiles for users
+# # This enables console access with secure password policies
 resource "aws_iam_user_login_profile" "users" {
   for_each = toset(var.users)
 
@@ -493,8 +494,8 @@ resource "aws_iam_access_key" "users" {
   user = aws_iam_user.users[each.value].name
 }
 
-# Create combined IAM policy
-# This policy grants necessary permissions for the platform
+# # Create combined IAM policy
+# # This policy grants necessary permissions for the platform
 resource "aws_iam_policy" "combined_policy" {
   name        = "${var.group_name}-CombinedPolicy"
   description = "policy for ${var.group_name} with read access to services"
@@ -510,35 +511,35 @@ resource "aws_iam_policy" "combined_policy" {
   })
 }
 
-# Attach policy to IAM group
-# This applies the permissions to all group members
+# # Attach policy to IAM group
+# # This applies the permissions to all group members
 resource "aws_iam_group_policy_attachment" "policy_attachment" {
   group      = aws_iam_group.group.name
   policy_arn = aws_iam_policy.combined_policy.arn
 }
 
 # Secret Managers
-# resource "aws_secretsmanager_secret" "security_manager" {
-#   name = "${var.project_name}-security-manager10"
+resource "aws_secretsmanager_secret" "security_manager" {
+  name = "${var.project_name}-security-manager10"
 
-#   tags                           = local.tags
-#   description                    = "Secret manager for ${var.project_name} project"
-#   force_overwrite_replica_secret = true
+  tags                           = local.tags
+  description                    = "Secret manager for ${var.project_name} project"
+  force_overwrite_replica_secret = true
 
 
-# }
+}
 
 # # Secret Manager version
-# resource "aws_secretsmanager_secret_version" "secret_version" {
-#   secret_id = aws_secretsmanager_secret.security_manager.id
-#   secret_string = jsonencode({
-#     "MAIL_SERVER"   = var.mail_server,
-#     "MAIL_PORT"     = var.mail_port,
-#     "MAIL_USERNAME" = var.mail_username,
-#     "MAIL_PASSWORD" = var.mail_password,
-#     "MAIL_USE_TLS"  = var.mail_use_tls,
-#   })
-# }
+resource "aws_secretsmanager_secret_version" "secret_version" {
+  secret_id = aws_secretsmanager_secret.security_manager.id
+  secret_string = jsonencode({
+    "MAIL_SERVER"   = var.mail_server,
+    "MAIL_PORT"     = var.mail_port,
+    "MAIL_USERNAME" = var.mail_username,
+    "MAIL_PASSWORD" = var.mail_password,
+    "MAIL_USE_TLS"  = var.mail_use_tls,
+  })
+}
 
 # CloudWatch Logs
 resource "aws_cloudwatch_log_group" "logs" {
@@ -551,15 +552,15 @@ resource "aws_cloudwatch_log_group" "logs" {
   )
 }
 
-# Create CloudWatch log stream for VPN
-# This organizes VPN logs within the log group
+# # Create CloudWatch log stream for VPN
+# # This organizes VPN logs within the log group
 resource "aws_cloudwatch_log_stream" "log_stream" {
   name           = "vpn-connections"
   log_group_name = aws_cloudwatch_log_group.logs.name
 }
 
-# Create S3 bucket for MWAA DAGs
-# This stores Airflow DAG definitions and configurations
+# # Create S3 bucket for MWAA DAGs
+# # This stores Airflow DAG definitions and configurations
 module "s3_bucket" {
   source = "git::https://github.com/Chideraozigbo/My-Terraform-Modules.git//modules/s3?ref=v1.0.3"
 
@@ -573,8 +574,8 @@ module "s3_bucket" {
   )
 }
 
-# Create IAM role for MWAA execution
-# This role allows MWAA to access necessary AWS services
+# # Create IAM role for MWAA execution
+# # This role allows MWAA to access necessary AWS services
 resource "aws_iam_role" "mwaa_execution_role" {
   name = "${var.project_name}-mwaa-execution-role"
 
@@ -600,8 +601,8 @@ resource "aws_iam_role" "mwaa_execution_role" {
   )
 }
 
-# Create IAM role for EMR service
-# This role allows EMR to access necessary AWS services
+# # Create IAM role for EMR service
+# # This role allows EMR to access necessary AWS services
 resource "aws_iam_role" "emr_service_role" {
   name = "EMR_DefaultRole"
 
@@ -624,8 +625,8 @@ resource "aws_iam_role" "emr_service_role" {
   )
 }
 
-# Attach EMR service role policy
-# This grants EMR necessary permissions
+# # Attach EMR service role policy
+# # This grants EMR necessary permissions
 resource "aws_iam_role_policy_attachment" "emr_service_role_attachment" {
   role       = aws_iam_role.emr_service_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2"
@@ -661,8 +662,8 @@ resource "aws_iam_policy" "emr_service_additional_policy" {
   })
 }
 
-# Attach additional EMR service policy
-# This applies the additional permissions to the EMR service role
+# # Attach additional EMR service policy
+# # This applies the additional permissions to the EMR service role
 resource "aws_iam_role_policy_attachment" "emr_service_additional_attachment" {
   role       = aws_iam_role.emr_service_role.name
   policy_arn = aws_iam_policy.emr_service_additional_policy.arn
@@ -692,8 +693,8 @@ resource "aws_iam_role" "emr_ec2_role" {
   )
 }
 
-# Attach EMR EC2 role policy
-# This grants EMR EC2 instances necessary permissions
+# # Attach EMR EC2 role policy
+# # This grants EMR EC2 instances necessary permissions
 resource "aws_iam_role_policy_attachment" "emr_ec2_role_attachment" {
   role       = aws_iam_role.emr_ec2_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
@@ -744,8 +745,8 @@ resource "aws_security_group" "mwaa" {
   )
 }
 
-# Add ingress rule for MWAA security group
-# This allows MWAA components to communicate with each other
+# # Add ingress rule for MWAA security group
+# # This allows MWAA components to communicate with each other
 resource "aws_vpc_security_group_ingress_rule" "self_ingress" {
   security_group_id = aws_security_group.mwaa.id
 
@@ -754,8 +755,8 @@ resource "aws_vpc_security_group_ingress_rule" "self_ingress" {
   description                  = "Allow all traffic from the same security group"
 }
 
-# Add ingress rule for VPC traffic
-# This allows communication from within the VPC
+# # Add ingress rule for VPC traffic
+# # This allows communication from within the VPC
 resource "aws_vpc_security_group_ingress_rule" "vpc_ingress" {
   security_group_id = aws_security_group.mwaa.id
   cidr_ipv4         = var.cidr_block
@@ -763,8 +764,8 @@ resource "aws_vpc_security_group_ingress_rule" "vpc_ingress" {
   description       = "Allow all traffic from VPC"
 }
 
-# Add egress rule for MWAA security group
-# This allows MWAA to access the internet and other services
+# # Add egress rule for MWAA security group
+# # This allows MWAA to access the internet and other services
 resource "aws_vpc_security_group_egress_rule" "mwaa_egress" {
   security_group_id = aws_security_group.mwaa.id
   cidr_ipv4         = "0.0.0.0/0"
@@ -779,7 +780,7 @@ resource "aws_mwaa_environment" "big_data" {
   execution_role_arn     = aws_iam_role.mwaa_execution_role.arn
   dag_s3_path            = "dags/"
   source_bucket_arn      = module.s3_bucket.bucket_arn
-  environment_class      = "mw1.small"
+  environment_class      = "mw1.micro"
   startup_script_s3_path = "scripts/mwaa_startup.sh"
   webserver_access_mode  = "PRIVATE_ONLY"
 
@@ -841,29 +842,29 @@ resource "aws_s3_object" "mwaa_dags_folder" {
 }
 
 # S3 bucket object for the startup script
-# resource "aws_s3_object" "mwaa_startup_script" {
-#   bucket = var.aws_bucket_name
-#   key    = "scripts/mwaa_startup.sh"
+resource "aws_s3_object" "mwaa_startup_script" {
+  bucket = var.aws_bucket_name
+  key    = "scripts/mwaa_startup.sh"
 
-#   content = <<EOF
-# #!/bin/bash
+  content = <<EOF
+#!/bin/bash
 
-# SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
-
-
-# MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
-# MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
+SMTP_SECRET=$(aws secretsmanager get-secret-value --secret-id ${aws_secretsmanager_secret.security_manager.name} --region ${var.aws_region} | jq -r '.SecretString')
 
 
-# airflow connections add 'smtp_default' \
-#   --conn-type 'smtp' \
-#   --conn-host "$MAIL_SERVER" \
-#   --conn-login "$MAIL_USERNAME" \
-#   --conn-password "$MAIL_PASSWORD" \
-#   --conn-port "$MAIL_PORT" \
-#   --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
-# EOF
-# }
+MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
+MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
+
+
+airflow connections add 'smtp_default' \
+  --conn-type 'smtp' \
+  --conn-host "$MAIL_SERVER" \
+  --conn-login "$MAIL_USERNAME" \
+  --conn-password "$MAIL_PASSWORD" \
+  --conn-port "$MAIL_PORT" \
+  --conn-extra "{\"use_tls\": $MAIL_USE_TLS, \"timeout\": 30}"
+EOF
+}
 
 
 
