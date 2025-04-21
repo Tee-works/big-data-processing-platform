@@ -7,7 +7,7 @@ from airflow.providers.amazon.aws.operators.emr import (
 from airflow.providers.amazon.aws.sensors.emr import (EmrJobFlowSensor,
                                                       EmrStepSensor)
 from airflow.utils.trigger_rule import TriggerRule
-from notification.email import task_fail_alert
+from notification.email import task_state_alert
 
 DEFAULT_ARGS = {
     "owner": "team_4",
@@ -16,7 +16,8 @@ DEFAULT_ARGS = {
     "email_on_failure": True,
     "email_on_retry": False,
     "email_on_success": True,
-    'on_failure_callback': task_fail_alert,
+    'on_failure_callback': task_state_alert,
+    'on_success_callback': task_state_alert,
     "retries": 1,
     "retry_delay": timedelta(seconds=5),
 }
@@ -57,7 +58,7 @@ JOB_FLOW_OVERRIDES = {
 
 SPARK_STEPS = [
     {
-        "Name": "average_salary",
+        "Name": "test_run_spark_job",
         "ActionOnFailure": "CONTINUE",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
