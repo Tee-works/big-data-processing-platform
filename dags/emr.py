@@ -12,7 +12,7 @@ from notification.email import task_state_alert
 DEFAULT_ARGS = {
     "owner": "team_4",
     "depends_on_past": False,
-    "email": ["chideraozigbo@gmail.com"],
+    "email": ["chideraozigbo@gmail.com", "kingsolomonifeanyi@gmail.com"],
     "email_on_failure": True,
     "email_on_retry": False,
     "email_on_success": True,
@@ -57,6 +57,18 @@ JOB_FLOW_OVERRIDES = {
 }
 
 SPARK_STEPS = [
+    {
+        "Name": "Move raw data from S3",
+        "ActionOnFailure": "CANCEL_AND_WAIT",
+        "HadoopJarStep": {
+            "Jar": "command-runner.jar",
+            "Args": [
+                "s3-dist-cp",
+                "--src=s3://big-data-bck/data",
+                "--dest=/movie",
+            ],
+        },
+    },
     {
         "Name": "test_run_spark_job",
         "ActionOnFailure": "CONTINUE",
