@@ -1,6 +1,6 @@
 import smtplib
-import ssl
-from email.message import EmailMessage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from airflow.models import Variable
 
@@ -52,21 +52,18 @@ def notification_email(context, state):
 
     Here is the log url: {log}
     """
-    em = EmailMessage()
-    em["From"] = email_sender
-    em["To"] = email_receiver
-    em["Subject"] = subject
-    em.set_content(body)
-
-    ssl_context = ssl.create_default_context()
+    msg = MIMEMultipart()
+    msg['From'] = email_sender
+    msg['To'] = email_receiver
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
 
     try:
-        with smtplib.SMTP(
-            mail_server, email_port, context=ssl_context
-        ) as smtp:
-            smtp.login(email_sender, email_password)
-            smtp.sendmail(email_sender, email_receiver, em.as_string())
-            print("Email Sent Successfully")
+        with smtplib.SMTP(mail_server, email_port) as server:
+            server.starttls()
+            server.login(email_sender, email_password)
+            server.send_message(msg)
+        print("Email sent successfully")
     except Exception as e:
         print(f"Failed to send email: {str(e)}")
 
