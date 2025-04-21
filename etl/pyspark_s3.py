@@ -86,7 +86,7 @@ def load_csv_and_upload_to_s3_as_parquet(
 
             if partition_record_count == 0:
                 logger.warning(
-                    f"Partition nyc_311_{idx + 1} has no data. Skipping..."
+                    f"Partition nyc_311_{idx + 1} has no data. Skipping"
                 )
                 continue
 
@@ -108,8 +108,9 @@ def load_csv_and_upload_to_s3_as_parquet(
         logger.info("Spark session stopped")
 
 
-# load_csv_and_upload_to_s3_as_parquet(
-#     s3_csv_source_path="s3a://your-bucket-name/input/my_file.csv",
-#     s3_output_dir="s3a://your-bucket-name/nyc-311",
-#     data_record_split_num=5
-# )
+load_csv_and_upload_to_s3_as_parquet(
+    s3_csv_source_path="""
+    s3a://big-data-bck/data/New_York_311_Service_Requests_2023_present.csv""",
+    s3_output_dir="s3a://big-data-bck/data/",
+    data_record_split_num=5,
+)
