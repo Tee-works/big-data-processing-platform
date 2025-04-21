@@ -25,14 +25,14 @@ def generate_random_splits(total_records, data_record_split_num):
 
 
 def load_csv_and_upload_to_s3_as_parquet(
-    s3_csv_source_path, s3_output_dir, data_record_split_num=5
+    s3_source, s3_output_dir, data_record_split_num=5
 ):
     """
     Splits a CSV dataset into multiple Parquet files
     and uploads them to an S3(AWS) bucket using PySpark.
 
     Args:
-        s3_csv_source_path (str):
+        s3_source (str):
         The S3 path to the input CSV file.
         s3_output_dir (str):
         The target S3 directory to store the Parquet files.
@@ -58,9 +58,9 @@ def load_csv_and_upload_to_s3_as_parquet(
     )
 
     try:
-        logger.info(f"Loading dataset from {s3_csv_source_path}")
+        logger.info(f"Loading dataset from {s3_source}")
 
-        df = spark.read.option("header", True).csv(s3_csv_source_path)
+        df = spark.read.option("header", True).csv(s3_source)
 
         # count number of ingested records
         total_records = df.count()
@@ -81,7 +81,7 @@ def load_csv_and_upload_to_s3_as_parquet(
                     df.limit(current_index)
                 )
 
-            output_path = f"{s3_output_dir}/nyc_311_{idx + 1}.parquet"
+            # output_path = f"{s3_output_dir}/nyc_311_{idx + 1}.parquet"
             partition_record_count = df_partition.count()
 
             if partition_record_count == 0:
@@ -90,10 +90,10 @@ def load_csv_and_upload_to_s3_as_parquet(
                 )
                 continue
 
-            df_partition.write.mode("overwrite").parquet(output_path)
+            df_partition.write.mode("overwrite").parquet(s3_output_dir)
             logger.info(
                 f"""Partition nyc_311_{idx + 1}:
-                Saved {partition_record_count} records to {output_path}"""
+                Saved {partition_record_count} records to {s3_output_dir}"""
             )
 
             current_index += size
@@ -109,8 +109,7 @@ def load_csv_and_upload_to_s3_as_parquet(
 
 
 load_csv_and_upload_to_s3_as_parquet(
-    s3_csv_source_path="""
-    /movie""",
+    s3_source="/movie",
     s3_output_dir="/output",
     data_record_split_num=5,
 )
