@@ -91,7 +91,7 @@ SPARK_STEPS = [
                 "--dest=s3://big-data-bck/output"
             ],
         },
-    },
+    }
 
 ]
 
