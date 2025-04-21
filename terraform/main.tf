@@ -699,6 +699,30 @@ resource "aws_iam_role_policy_attachment" "emr_ec2_role_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role"
 }
 
+resource "aws_iam_policy" "emr_s3_access_policy" {
+  name = "EMR_S3_Access_Policy"
+
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Effect = "Allow",
+        Action = ["s3:GetObject", "s3:PutObject", "s3:ListBucket"],
+        Resource = [
+          module.s3_bucket.bucket_arn,
+          "${module.s3_bucket.bucket_arn}/*"
+        ]
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "attach_emr_s3_access" {
+  role       = aws_iam_role.emr_ec2_role.name
+  policy_arn = aws_iam_policy.emr_s3_access_policy.arn
+}
+
+
 # Create IAM instance profile for EMR EC2
 # This allows EMR to launch EC2 instances with the correct permissions
 resource "aws_iam_instance_profile" "emr_ec2_instance_profile" {
