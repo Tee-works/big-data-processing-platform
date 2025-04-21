@@ -111,6 +111,6 @@ def load_csv_and_upload_to_s3_as_parquet(
 load_csv_and_upload_to_s3_as_parquet(
     s3_csv_source_path="""
     /movie""",
-    s3_output_dir="s3://big-data-bck/data/",
+    s3_output_dir="/output",
     data_record_split_num=5,
 )

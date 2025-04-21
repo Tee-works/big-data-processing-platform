@@ -15,9 +15,7 @@ DEFAULT_ARGS = {
     "email": ["chideraozigbo@gmail.com", "kingsolomonifeanyi@gmail.com"],
     "email_on_failure": True,
     "email_on_retry": False,
-    "email_on_success": True,
     "on_failure_callback": task_state_alert,
-    "on_success_callback": task_state_alert,
     "retries": 1,
     "retry_delay": timedelta(seconds=5),
 }
@@ -81,7 +79,20 @@ SPARK_STEPS = [
                 "s3://big-data-bck/etl/pyspark_s3.py",
             ],
         },
-    }
+    },
+    {
+        "Name": "Move clean data from HDFS to S3",
+        "ActionOnFailure": "CANCEL_AND_WAIT",
+        "HadoopJarStep": {
+            "Jar": "command-runner.jar",
+            "Args": [
+                "s3-dist-cp",
+                "--src=/output",
+                "--dest=s3://big-data-bck/output"
+            ],
+        },
+    },
+
 ]
 
 with DAG(
