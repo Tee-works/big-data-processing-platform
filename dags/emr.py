@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.providers.amazon.aws.operators.emr import (
-    EmrAddStepsOperator, EmrCreateJobFlowOperator, EmrTerminateJobFlowOperator)
-from airflow.providers.amazon.aws.sensors.emr import (EmrJobFlowSensor,
-                                                      EmrStepSensor)
+    EmrAddStepsOperator,
+    EmrCreateJobFlowOperator,
+    EmrTerminateJobFlowOperator,
+)
+from airflow.providers.amazon.aws.sensors.emr import EmrJobFlowSensor, EmrStepSensor
 from airflow.utils.trigger_rule import TriggerRule
 
 DEFAULT_ARGS = {
@@ -63,7 +65,7 @@ SPARK_STEPS = [
                 "spark-submit",
                 "--deploy-mode",
                 "client",
-                "s3://big-data-bck/etl/test_etl.py",
+                "s3://big-data-bck/etl/pyspark_s3.py",
             ],
         },
     }
