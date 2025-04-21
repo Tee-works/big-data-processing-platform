@@ -520,7 +520,7 @@ resource "aws_iam_group_policy_attachment" "policy_attachment" {
 
 # Secret Managers
 resource "aws_secretsmanager_secret" "security_manager" {
-  name = "${var.project_name}-security-manager10"
+  name = "${var.project_name}-security-manager11"
 
   tags                           = local.tags
   description                    = "Secret manager for ${var.project_name} project"
