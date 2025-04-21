@@ -19,7 +19,7 @@ def notification_email(context, state):
     dag_obj = context.get("dag") or task_instance.dag
 
     # Get owner from DAG's default_args
-    dag_owner = "Airflow User"  # Default value
+    dag_owner = "Airflow User"
     if hasattr(dag_obj, "default_args") and "owner" in dag_obj.default_args:
         dag_owner = dag_obj.default_args["owner"]
 
@@ -61,7 +61,7 @@ def notification_email(context, state):
     ssl_context = ssl.create_default_context()
 
     try:
-        with smtplib.SMTP_SSL(
+        with smtplib.SMTP(
             mail_server, email_port, context=ssl_context
         ) as smtp:
             smtp.login(email_sender, email_password)
