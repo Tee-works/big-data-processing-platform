@@ -68,7 +68,7 @@ SPARK_STEPS = [
         },
     },
     {
-        "Name": "test_run_spark_job",
+        "Name": "Run Spark Job",
         "ActionOnFailure": "CONTINUE",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
@@ -81,7 +81,7 @@ SPARK_STEPS = [
         },
     },
     {
-        "Name": "Move clean data from HDFS to S3",
+        "Name": "Move clean data  to S3",
         "ActionOnFailure": "CANCEL_AND_WAIT",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
