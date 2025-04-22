@@ -538,6 +538,7 @@ resource "aws_secretsmanager_secret_version" "secret_version" {
     "MAIL_USERNAME" = var.mail_username,
     "MAIL_PASSWORD" = var.mail_password,
     "MAIL_USE_TLS"  = var.mail_use_tls,
+    "PRIVATE_SUBNET_ID"   = module.vpc_private_a_subnet.subnet_id
   })
 }
 
@@ -867,12 +868,15 @@ MAIL_USERNAME=$(echo $SMTP_SECRET | jq -r '.MAIL_USERNAME')
 MAIL_PASSWORD=$(echo $SMTP_SECRET | jq -r '.MAIL_PASSWORD')
 MAIL_SERVER=$(echo $SMTP_SECRET | jq -r '.MAIL_SERVER')
 MAIL_PORT=$(echo $SMTP_SECRET | jq -r '.MAIL_PORT')
+PRIVATE_SUBNET_ID=$(echo $SMTP_SECRET | jq -r '.PRIVATE_SUBNET_ID')
+PRIVATE_SUBNET_ID
 
 # Add environment variables in Airflow as Variables
 airflow variables set 'email_sender' "$MAIL_USERNAME"
 airflow variables set 'email_password' "$MAIL_PASSWORD"
 airflow variables set 'MAIL_SERVER' "$MAIL_SERVER"
 airflow variables set 'email_port' "$MAIL_PORT"
+airflow variables set 'private_subnet_id' "$PRIVATE_SUBNET_ID"
 EOF
 }
 

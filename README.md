@@ -58,54 +58,6 @@ The platform is built on AWS Cloud with a focus on security, scalability, and co
 
 ![Architecture Diagram](images/big_data_architecture.gif)
 
-### Airflow DAGs
-
-The platform uses Apache Airflow (MWAA) to orchestrate data processing workflows. Two main DAGs are implemented:
-
-### 1. Simple Addition DAG (`test.py`)
-A basic DAG that demonstrates the platform's workflow capabilities:
-- **Purpose**: Demonstrates basic task execution and dependency management
-- **Schedule**: Runs daily
-- **Tasks**:
-  - `start`: Initial dummy task
-  - `addition_task`: Performs a simple addition operation (5 + 3)
-  - `end`: Final dummy task
-- **Features**:
-  - Email notifications on success/failure
-  - Automatic retry on failure
-  - Configurable retry delay
-
-### 2. Big Data Pipeline DAG (`emr.py`)
-A production-grade DAG for orchestrating EMR-based data processing:
-- **Purpose**: Manages the complete lifecycle of EMR clusters and Spark jobs
-- **Schedule**: Runs daily
-- **Tasks**:
-  - `begin_workflow`: Initial dummy task
-  - `create_emr_cluster`: Creates an EMR cluster with specified configuration
-  - `check_cluster_ready`: Monitors cluster creation status
-  - `submit_spark_application`: Submits Spark job to the cluster
-  - `check_submission_status`: Monitors job execution
-  - `terminate_emr_cluster`: Terminates the cluster after job completion
-  - `end_workflow`: Final dummy task
-- **EMR Configuration**:
-  - Release: EMR 7.8.0
-  - Applications: Hadoop, Spark
-  - Instance Types: m5.xlarge
-  - Cluster Size: 1 Master + 2 Core nodes
-  - Spot instances for cost optimization
-- **Features**:
-  - Automated cluster lifecycle management
-  - Job monitoring and status tracking
-  - Email notifications
-  - Automatic retry on failure
-  - Secure VPC integration
-
-### DAG Management
-- DAGs are stored in S3 and automatically synced to MWAA
-- Version control through Git
-- Configuration as code
-- Secure access through VPC endpoints
-
 ### Architecture Flow
 
 1. **Data Ingestion Layer**
@@ -166,6 +118,54 @@ A production-grade DAG for orchestrating EMR-based data processing:
        - Improved reliability by keeping management traffic within AWS network
        - Better compliance with security requirements
        - Cost optimization by reducing NAT Gateway usage for management operations
+
+### Airflow DAGs
+
+The platform uses Apache Airflow (MWAA) to orchestrate data processing workflows. Two main DAGs are implemented:
+
+### 1. Simple Addition DAG (`test.py`)
+A basic DAG that demonstrates the platform's workflow capabilities:
+- **Purpose**: Demonstrates basic task execution and dependency management
+- **Schedule**: Runs daily
+- **Tasks**:
+  - `start`: Initial dummy task
+  - `addition_task`: Performs a simple addition operation (5 + 3)
+  - `end`: Final dummy task
+- **Features**:
+  - Email notifications on success/failure
+  - Automatic retry on failure
+  - Configurable retry delay
+
+### 2. Big Data Pipeline DAG (`emr.py`)
+A production-grade DAG for orchestrating EMR-based data processing:
+- **Purpose**: Manages the complete lifecycle of EMR clusters and Spark jobs
+- **Schedule**: Runs daily
+- **Tasks**:
+  - `begin_workflow`: Initial dummy task
+  - `create_emr_cluster`: Creates an EMR cluster with specified configuration
+  - `check_cluster_ready`: Monitors cluster creation status
+  - `submit_spark_application`: Submits Spark job to the cluster
+  - `check_submission_status`: Monitors job execution
+  - `terminate_emr_cluster`: Terminates the cluster after job completion
+  - `end_workflow`: Final dummy task
+- **EMR Configuration**:
+  - Release: EMR 7.8.0
+  - Applications: Hadoop, Spark
+  - Instance Types: m5.xlarge
+  - Cluster Size: 1 Master + 2 Core nodes
+  - Spot instances for cost optimization
+- **Features**:
+  - Automated cluster lifecycle management
+  - Job monitoring and status tracking
+  - Email notifications
+  - Automatic retry on failure
+  - Secure VPC integration
+
+### DAG Management
+- DAGs are stored in S3 and automatically synced to MWAA
+- Version control through Git
+- Configuration as code
+- Secure access through VPC endpoints
 
 ### Why These Services?
 

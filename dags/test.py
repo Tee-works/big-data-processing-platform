@@ -11,7 +11,11 @@ default_args = {
     "email_on_failure": True,
     "email_on_retry": False,
     "on_failure_callback": task_state_alert,
-    "email": ["chideraozigbo@gmail.com", "kingsolomonifeanyi@gmail.com"],
+    "email": [
+        "chideraozigbo@gmail.com",
+        "kingsolomonifeanyi@gmail.com",
+        "iyanujesuakinyefa@gmail.com",
+    ],
     "retries": 1,
     "retry_delay": timedelta(seconds=3),
 }

@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta
 
 from airflow import DAG
+from airflow.models import Variable
 from airflow.operators.empty import EmptyOperator as DummyOperator
 from airflow.providers.amazon.aws.operators.emr import (
     EmrAddStepsOperator, EmrCreateJobFlowOperator, EmrTerminateJobFlowOperator)
@@ -9,10 +10,16 @@ from airflow.providers.amazon.aws.sensors.emr import (EmrJobFlowSensor,
 from airflow.utils.trigger_rule import TriggerRule
 from notification.email import task_state_alert
 
+subnet_id = Variable.get("private_subnet_id")
+
 DEFAULT_ARGS = {
     "owner": "team_4",
     "depends_on_past": False,
-    "email": ["chideraozigbo@gmail.com", "kingsolomonifeanyi@gmail.com"],
+    "email": [
+        "chideraozigbo@gmail.com",
+        "kingsolomonifeanyi@gmail.com",
+        "iyanujesuakinyefa@gmail.com",
+    ],
     "email_on_failure": True,
     "email_on_retry": False,
     "on_failure_callback": task_state_alert,
@@ -44,9 +51,7 @@ JOB_FLOW_OVERRIDES = {
         "KeepJobFlowAliveWhenNoSteps": True,
         "TerminationProtected": False,
         "Ec2KeyName": "cyberdom-key",
-        "Ec2SubnetId": "subnet-0bdf0c4def5250954",
-        # "EmrManagedMasterSecurityGroup": "sg-0e58528ec849d645d",
-        # "EmrManagedSlaveSecurityGroup": "sg-0e58528ec849d645d",
+        "Ec2SubnetId": subnet_id,
     },
     "VisibleToAllUsers": True,
     "JobFlowRole": "EMR_EC2_DefaultRole",
@@ -57,7 +62,7 @@ JOB_FLOW_OVERRIDES = {
 SPARK_STEPS = [
     {
         "Name": "Move raw data from S3",
-        "ActionOnFailure": "CANCEL_AND_WAIT",
+        "ActionOnFailure": "TERMINATE_CLUSTER",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
             "Args": [
@@ -69,7 +74,7 @@ SPARK_STEPS = [
     },
     {
         "Name": "Run Spark Job",
-        "ActionOnFailure": "CONTINUE",
+        "ActionOnFailure": "TERMINATE_CLUSTER",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
             "Args": [
@@ -82,17 +87,16 @@ SPARK_STEPS = [
     },
     {
         "Name": "Move clean data  to S3",
-        "ActionOnFailure": "CANCEL_AND_WAIT",
+        "ActionOnFailure": "TERMINATE_CLUSTER",
         "HadoopJarStep": {
             "Jar": "command-runner.jar",
             "Args": [
                 "s3-dist-cp",
                 "--src=/output",
-                "--dest=s3://big-data-bck/output"
+                "--dest=s3://big-data-bck/output",
             ],
         },
-    }
-
+    },
 ]
 
 with DAG(
